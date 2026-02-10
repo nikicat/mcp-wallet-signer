@@ -11,7 +11,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       // Create a transaction request
@@ -63,7 +63,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       // Create a contract call request
@@ -108,7 +108,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       const { id, promise } = pendingStore.createSendTransactionRequest({

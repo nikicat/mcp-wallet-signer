@@ -18,7 +18,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       // Test health endpoint
@@ -39,7 +39,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       // Create a pending request
@@ -71,7 +71,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       // Use a valid UUID format that doesn't exist
@@ -91,7 +91,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       // Create a pending request
@@ -129,7 +129,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       // Create a pending request
@@ -167,7 +167,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       // Use a valid UUID format that doesn't exist
@@ -190,7 +190,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       const { id, promise } = pendingStore.createConnectRequest();

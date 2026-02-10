@@ -10,7 +10,8 @@
     "viem/": "npm:viem@2.21.0/",
     "zod": "npm:zod@3.23.8",
     "open": "npm:open@10.1.0",
-    "@std/http": "jsr:@std/http@1.0.10"
+    "@std/http": "jsr:@std/http@1.0.10",
+    "@types/node": "npm:@types/node@22.5.0"
   },
   "tasks": {
     "dev": "deno run --allow-net --allow-env --allow-read --allow-run --allow-sys src/index.ts",

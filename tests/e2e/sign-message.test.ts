@@ -11,7 +11,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       // Create a sign message request
@@ -57,7 +57,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       const { id, promise } = pendingStore.createSignMessageRequest({
@@ -91,7 +91,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       const domain = {
@@ -171,7 +171,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const { port, stop } = startTestServer();
+    const { port, stop } = await startTestServer();
 
     try {
       const { id, promise } = pendingStore.createSignTypedDataRequest({

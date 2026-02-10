@@ -1,3 +1,4 @@
+import process from "node:process";
 import type { ChainConfig } from "./types.ts";
 
 // Default HTTP server port
@@ -5,7 +6,7 @@ export const DEFAULT_PORT = 3847;
 
 // Get port from environment or use default
 export function getPort(): number {
-  const envPort = Deno.env.get("EVM_MCP_PORT");
+  const envPort = process.env.EVM_MCP_PORT;
   if (envPort) {
     const parsed = parseInt(envPort, 10);
     if (!isNaN(parsed) && parsed > 0 && parsed < 65536) {
@@ -17,7 +18,7 @@ export function getPort(): number {
 
 // Get default chain ID from environment or use mainnet
 export function getDefaultChainId(): number {
-  const envChain = Deno.env.get("EVM_MCP_DEFAULT_CHAIN");
+  const envChain = process.env.EVM_MCP_DEFAULT_CHAIN;
   if (envChain) {
     const parsed = parseInt(envChain, 10);
     if (!isNaN(parsed) && parsed > 0) {

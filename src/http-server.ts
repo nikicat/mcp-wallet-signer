@@ -1,8 +1,13 @@
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { statSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import type { AddressInfo } from "node:net";
+
 import { getPort } from "./config.ts";
 import { pendingStore } from "./pending-store.ts";
 import type { CompleteApiRequest, PendingApiResponse } from "./types.ts";
 
-let server: Deno.HttpServer | null = null;
+let server: Server | null = null;
 let serverPort: number | null = null;
 
 // Store test results for e2e browser testing
@@ -19,13 +24,13 @@ function getWebDistPath(): string {
   // Try production path first (dist/web relative to dist/)
   const prodPath = `${scriptDir}../dist/web`;
   try {
-    Deno.statSync(prodPath);
+    statSync(prodPath);
     return prodPath;
   } catch {
     // Fall back to development path
     const devPath = `${scriptDir}../web/dist`;
     try {
-      Deno.statSync(devPath);
+      statSync(devPath);
       return devPath;
     } catch {
       // If neither exists, return production path (will fail later with clear error)
@@ -47,7 +52,7 @@ async function serveStaticFile(path: string, webDistPath: string): Promise<Respo
   const fullPath = `${webDistPath}/${filePath}`;
 
   try {
-    const file = await Deno.readFile(fullPath);
+    const file = new Uint8Array(await readFile(fullPath));
     const contentType = getContentType(filePath);
     return new Response(file, {
       headers: {
@@ -59,7 +64,7 @@ async function serveStaticFile(path: string, webDistPath: string): Promise<Respo
     // For SPA, serve index.html for any unknown path
     if (!filePath.includes(".")) {
       try {
-        const indexHtml = await Deno.readFile(`${webDistPath}/index.html`);
+        const indexHtml = new Uint8Array(await readFile(`${webDistPath}/index.html`));
         return new Response(indexHtml, {
           headers: {
             "Content-Type": "text/html",
@@ -289,9 +294,70 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
 }
 
 /**
+ * Read the full request body from an IncomingMessage as a string.
+ */
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.setEncoding("utf8");
+    req.on("data", (chunk: string) => (body += chunk));
+    req.on("end", () => resolve(body));
+    req.on("error", reject);
+  });
+}
+
+/**
+ * Write a web-standard Response to a Node ServerResponse.
+ */
+async function writeResponse(res: ServerResponse, response: Response): Promise<void> {
+  res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+  if (response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    res.end(bytes);
+  } else {
+    res.end();
+  }
+}
+
+/**
+ * Create a node:http request handler using the existing Response-based logic.
+ */
+function makeHandler(webDistPath: string) {
+  return async (req: IncomingMessage, res: ServerResponse) => {
+    const url = new URL(req.url!, `http://${req.headers.host || "127.0.0.1"}`);
+    const pathname = url.pathname;
+    const method = req.method || "GET";
+
+    let response: Response;
+
+    if (pathname.startsWith("/api/")) {
+      let body: unknown = null;
+      if (method === "POST") {
+        try {
+          const raw = await readBody(req);
+          body = JSON.parse(raw);
+        } catch {
+          response = new Response(JSON.stringify({ error: "Invalid JSON" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
+          await writeResponse(res, response);
+          return;
+        }
+      }
+      response = handleApiRequest(pathname, method, body);
+    } else {
+      response = await serveStaticFile(pathname, webDistPath);
+    }
+
+    await writeResponse(res, response);
+  };
+}
+
+/**
  * Start the HTTP server if not already running
  */
-export function ensureServerRunning(overridePort?: number): number {
+export async function ensureServerRunning(overridePort?: number): Promise<number> {
   if (server && serverPort) {
     return serverPort;
   }
@@ -299,33 +365,14 @@ export function ensureServerRunning(overridePort?: number): number {
   const port = overridePort ?? getPort();
   const webDistPath = getWebDistPath();
 
-  server = Deno.serve({ port, hostname: "127.0.0.1" }, async (req) => {
-    const url = new URL(req.url);
-    const pathname = url.pathname;
+  const srv = createServer(makeHandler(webDistPath));
 
-    // API routes
-    if (pathname.startsWith("/api/")) {
-      let body: unknown = null;
-      if (req.method === "POST") {
-        try {
-          body = await req.json();
-        } catch {
-          return new Response(JSON.stringify({ error: "Invalid JSON" }), {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-      }
-      return handleApiRequest(pathname, req.method, body);
-    }
-
-    // Static files (web UI)
-    return await serveStaticFile(pathname, webDistPath);
+  await new Promise<void>((resolve) => {
+    srv.listen(port, "127.0.0.1", () => resolve());
   });
 
-  // When port 0 is requested, the OS assigns a free port — read it back
-  const addr = server.addr as Deno.NetAddr;
-  serverPort = addr.port;
+  server = srv;
+  serverPort = (srv.address() as AddressInfo).port;
   console.error(`[mcp-wallet-signer] HTTP server running on http://127.0.0.1:${serverPort}`);
 
   return serverPort;
@@ -343,7 +390,9 @@ export function getServerPort(): number | null {
  */
 export async function stopServer(): Promise<void> {
   if (server) {
-    await server.shutdown();
+    await new Promise<void>((resolve, reject) => {
+      server!.close((err) => (err ? reject(err) : resolve()));
+    });
     server = null;
     serverPort = null;
   }
@@ -353,34 +402,21 @@ export async function stopServer(): Promise<void> {
  * Start an independent test server on a random port.
  * Returns { port, stop } — does NOT touch the module-level singleton.
  */
-export function startTestServer(): { port: number; stop: () => Promise<void> } {
+export async function startTestServer(): Promise<{ port: number; stop: () => Promise<void> }> {
   const webDistPath = getWebDistPath();
 
-  const srv = Deno.serve({ port: 0, hostname: "127.0.0.1" }, async (req) => {
-    const url = new URL(req.url);
-    const pathname = url.pathname;
+  const srv = createServer(makeHandler(webDistPath));
 
-    if (pathname.startsWith("/api/")) {
-      let body: unknown = null;
-      if (req.method === "POST") {
-        try {
-          body = await req.json();
-        } catch {
-          return new Response(JSON.stringify({ error: "Invalid JSON" }), {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-      }
-      return handleApiRequest(pathname, req.method, body);
-    }
-
-    return await serveStaticFile(pathname, webDistPath);
+  await new Promise<void>((resolve) => {
+    srv.listen(0, "127.0.0.1", () => resolve());
   });
 
-  const addr = srv.addr as Deno.NetAddr;
+  const addr = srv.address() as AddressInfo;
   return {
     port: addr.port,
-    stop: () => srv.shutdown(),
+    stop: () =>
+      new Promise<void>((resolve, reject) => {
+        srv.close((err) => (err ? reject(err) : resolve()));
+      }),
   };
 }
