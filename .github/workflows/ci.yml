@@ -31,6 +31,9 @@ jobs:
       - name: Unit & e2e tests
         run: deno task test
 
+      - name: Build web UI
+        run: deno task build:web
+
       - name: Install Playwright Chromium
         run: deno task playwright:install
 
