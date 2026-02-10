@@ -288,7 +288,7 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
 /**
  * Start the HTTP server if not already running
  */
-export async function ensureServerRunning(overridePort?: number): Promise<number> {
+export function ensureServerRunning(overridePort?: number): number {
   if (server && serverPort) {
     return serverPort;
   }

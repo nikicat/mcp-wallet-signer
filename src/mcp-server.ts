@@ -176,7 +176,7 @@ export function createMcpServer(): Server {
   );
 
   // List available tools
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
+  server.setRequestHandler(ListToolsRequestSchema, () => {
     return { tools: TOOLS };
   });
 

@@ -18,7 +18,7 @@ export function getBaseUrl(): string {
 /**
  * Start the HTTP server in-process on a random port.
  */
-export async function startServer(): Promise<number> {
+export function startServer(): number {
   const { port, stop } = startTestServer();
   baseUrl = `http://127.0.0.1:${port}`;
   stopFn = stop;
