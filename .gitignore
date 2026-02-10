@@ -16,6 +16,9 @@ web/dist/
 .DS_Store
 Thumbs.db
 
+# Test artifacts
+test-results/
+
 # Logs
 *.log
 npm-debug.log*
