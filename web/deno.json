@@ -1,0 +1,13 @@
+{
+  "imports": {
+    "svelte": "npm:svelte@^5.0.0",
+    "viem": "npm:viem@^2.21.0",
+    "viem/": "npm:viem@2.21.0/"
+  },
+  "tasks": {
+    "dev": "deno run -A npm:vite",
+    "build": "deno run -A npm:vite build",
+    "preview": "deno run -A npm:vite preview"
+  },
+  "nodeModulesDir": "auto"
+}

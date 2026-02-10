@@ -1,0 +1,43 @@
+{
+  "name": "mcp-wallet-signer",
+  "version": "0.1.0",
+  "description": "MCP server that routes blockchain transactions to browser wallets for signing",
+  "type": "module",
+  "bin": {
+    "mcp-wallet-signer": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prepublishOnly": "echo 'Run deno task build:npm first'"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "wallet",
+    "ethereum",
+    "evm",
+    "metamask",
+    "blockchain",
+    "web3",
+    "claude"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/mcp-wallet-signer"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "viem": "^2.21.0",
+    "zod": "^3.23.8",
+    "open": "^10.1.0",
+    "express": "^4.21.0",
+    "cors": "^2.8.5"
+  }
+}
