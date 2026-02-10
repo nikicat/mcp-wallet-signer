@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { hasWallet, getWalletName, connectWallet, getChainId, switchChain } from "../lib/wallet";
+  import { hasWallet, getWalletName, getWalletIcon, connectWallet, getChainId, switchChain } from "../lib/wallet";
   import { completeSuccess, completeError } from "../lib/api";
   import type { PendingRequest } from "../lib/api";
 
@@ -15,6 +15,7 @@
 
   const walletAvailable = hasWallet();
   const walletName = walletAvailable ? getWalletName() : "";
+  const walletIcon = walletAvailable ? getWalletIcon() : null;
 
   async function handleConnect() {
     status = "connecting";
@@ -76,7 +77,7 @@
     {#if !walletAvailable}
       <div class="error-box">
         <p>No wallet detected</p>
-        <p class="small">Please install MetaMask or another browser wallet to continue.</p>
+        <p class="small">Please install a browser wallet to continue.</p>
       </div>
     {:else if status === "success"}
       <div class="success-box">
@@ -95,6 +96,9 @@
       </div>
     {:else}
       <div class="wallet-info">
+        {#if walletIcon}
+          <img class="wallet-icon" src={walletIcon} alt={walletName} />
+        {/if}
         <span class="wallet-name">{walletName}</span> detected
       </div>
 
@@ -173,8 +177,18 @@
   }
 
   .wallet-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     color: #9ca3af;
     margin-bottom: 24px;
+  }
+
+  .wallet-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
   }
 
   .wallet-name {

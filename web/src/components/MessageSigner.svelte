@@ -151,7 +151,7 @@
     {#if !walletAvailable}
       <div class="error-box">
         <p>No wallet detected</p>
-        <p class="small">Please install MetaMask or another browser wallet.</p>
+        <p class="small">Please install a browser wallet to continue.</p>
       </div>
     {:else if status !== "success"}
       {#if connectedAddress}

@@ -1,4 +1,4 @@
-// Wallet interactions using viem and window.ethereum
+// Wallet interactions using viem and EIP-6963 wallet discovery (via mipd)
 
 import {
   createWalletClient,
@@ -9,6 +9,7 @@ import {
   type Hex,
 } from "viem";
 import { mainnet, sepolia, polygon, arbitrum, optimism, base, avalanche, bsc } from "viem/chains";
+import { createStore, type EIP6963ProviderDetail } from "mipd";
 
 // Chain ID to viem chain mapping
 const CHAINS: Record<number, typeof mainnet> = {
@@ -22,44 +23,75 @@ const CHAINS: Record<number, typeof mainnet> = {
   56: bsc,
 };
 
-// Ethereum provider interface (window.ethereum)
-interface EthereumProvider {
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-  on: (event: string, callback: (...args: unknown[]) => void) => void;
-  removeListener: (event: string, callback: (...args: unknown[]) => void) => void;
-  isMetaMask?: boolean;
+// EIP-6963 provider store — discovers wallets via standardized events.
+// Lazily initialized on first access to ensure browser init scripts
+// (e.g. Playwright mock wallets) have run before mipd dispatches
+// its eip6963:requestProvider event.
+let _store: ReturnType<typeof createStore> | null = null;
+
+function getStore(): ReturnType<typeof createStore> | null {
+  if (_store === null && typeof window !== "undefined") {
+    _store = createStore();
+  }
+  return _store;
 }
 
-declare global {
-  interface Window {
-    ethereum?: EthereumProvider;
-  }
+/**
+ * Get the first EIP-6963 provider detail, or null
+ */
+function getProviderDetail(): EIP6963ProviderDetail | null {
+  const providers = getStore()?.getProviders() ?? [];
+  return providers.length > 0 ? providers[0] : null;
+}
+
+/**
+ * Get an EIP-1193 provider (EIP-6963 first, window.ethereum fallback)
+ */
+function getProvider() {
+  const detail = getProviderDetail();
+  if (detail) return detail.provider;
+  // deno-lint-ignore no-explicit-any
+  return (window as any).ethereum ?? null;
 }
 
 /**
  * Check if a browser wallet is available
  */
 export function hasWallet(): boolean {
-  return typeof window !== "undefined" && !!window.ethereum;
+  return typeof window !== "undefined" && getProvider() !== null;
 }
 
 /**
  * Get the wallet name (if detectable)
  */
 export function getWalletName(): string {
-  if (!window.ethereum) return "Unknown";
-  if (window.ethereum.isMetaMask) return "MetaMask";
+  const detail = getProviderDetail();
+  if (detail) return detail.info.name;
+  // deno-lint-ignore no-explicit-any
+  const eth = (window as any).ethereum;
+  if (!eth) return "Unknown";
+  if (eth.isMetaMask) return "MetaMask";
   return "Browser Wallet";
+}
+
+/**
+ * Get the wallet icon as a data URI, or null if unavailable
+ */
+export function getWalletIcon(): string | null {
+  const detail = getProviderDetail();
+  return detail?.info.icon ?? null;
 }
 
 /**
  * Create a viem wallet client for the given chain
  */
 function createClient(chainId: number): WalletClient {
+  const provider = getProvider();
+  if (!provider) throw new Error("No wallet detected");
   const chain = CHAINS[chainId] || mainnet;
   return createWalletClient({
     chain,
-    transport: custom(window.ethereum!),
+    transport: custom(provider),
   });
 }
 
@@ -67,12 +99,13 @@ function createClient(chainId: number): WalletClient {
  * Request wallet connection and return the connected address
  */
 export async function connectWallet(chainId?: number): Promise<Address> {
-  if (!window.ethereum) {
-    throw new Error("No wallet detected. Please install MetaMask or another browser wallet.");
+  const provider = getProvider();
+  if (!provider) {
+    throw new Error("No wallet detected. Please install a browser wallet to continue.");
   }
 
   // Request accounts
-  const accounts = (await window.ethereum.request({
+  const accounts = (await provider.request({
     method: "eth_requestAccounts",
   })) as Address[];
 
@@ -92,11 +125,10 @@ export async function connectWallet(chainId?: number): Promise<Address> {
  * Get currently connected accounts (without prompting)
  */
 export async function getAccounts(): Promise<Address[]> {
-  if (!window.ethereum) {
-    return [];
-  }
+  const provider = getProvider();
+  if (!provider) return [];
 
-  const accounts = (await window.ethereum.request({
+  const accounts = (await provider.request({
     method: "eth_accounts",
   })) as Address[];
 
@@ -107,14 +139,13 @@ export async function getAccounts(): Promise<Address[]> {
  * Switch to a different chain
  */
 export async function switchChain(chainId: number): Promise<void> {
-  if (!window.ethereum) {
-    throw new Error("No wallet detected");
-  }
+  const provider = getProvider();
+  if (!provider) throw new Error("No wallet detected");
 
   const hexChainId = `0x${chainId.toString(16)}`;
 
   try {
-    await window.ethereum.request({
+    await provider.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId: hexChainId }],
     });
@@ -123,7 +154,7 @@ export async function switchChain(chainId: number): Promise<void> {
     if ((error as { code?: number })?.code === 4902) {
       const chain = CHAINS[chainId];
       if (chain) {
-        await window.ethereum.request({
+        await provider.request({
           method: "wallet_addEthereumChain",
           params: [
             {
@@ -150,11 +181,10 @@ export async function switchChain(chainId: number): Promise<void> {
  * Get the current chain ID
  */
 export async function getChainId(): Promise<number> {
-  if (!window.ethereum) {
-    throw new Error("No wallet detected");
-  }
+  const provider = getProvider();
+  if (!provider) throw new Error("No wallet detected");
 
-  const hexChainId = (await window.ethereum.request({
+  const hexChainId = (await provider.request({
     method: "eth_chainId",
   })) as string;
 

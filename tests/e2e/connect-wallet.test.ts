@@ -11,16 +11,14 @@
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { pendingStore } from "../../src/pending-store.ts";
-import { ensureServerRunning, stopServer } from "../../src/http-server.ts";
+import { startTestServer } from "../../src/http-server.ts";
 
 Deno.test({
   name: "E2E - HTTP server starts and serves API",
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    // Start the server
-    const port = await ensureServerRunning();
-    assertExists(port);
+    const { port, stop } = startTestServer();
 
     try {
       // Test health endpoint
@@ -31,7 +29,7 @@ Deno.test({
       assertEquals(health.status, "ok");
       assertEquals(typeof health.pendingRequests, "number");
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });
@@ -41,7 +39,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       // Create a pending request
@@ -61,7 +59,7 @@ Deno.test({
       pendingStore.cancel(id);
       try { await promise; } catch { /* expected */ }
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });
@@ -71,7 +69,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       // Use a valid UUID format that doesn't exist
@@ -81,7 +79,7 @@ Deno.test({
       const data = await res.json();
       assertEquals(data.error, "Request not found");
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });
@@ -91,7 +89,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       // Create a pending request
@@ -119,7 +117,7 @@ Deno.test({
         assertEquals(result.result, "0xTestAddress");
       }
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });
@@ -129,7 +127,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       // Create a pending request
@@ -157,7 +155,7 @@ Deno.test({
         assertEquals(result.error, "User rejected");
       }
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });
@@ -167,7 +165,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       // Use a valid UUID format that doesn't exist
@@ -180,7 +178,7 @@ Deno.test({
       assertEquals(res.status, 404);
       await res.json(); // Consume body
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });
@@ -190,7 +188,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       const { id, promise } = pendingStore.createConnectRequest();
@@ -209,7 +207,7 @@ Deno.test({
       pendingStore.cancel(id);
       try { await promise; } catch { /* expected */ }
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });

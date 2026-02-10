@@ -288,12 +288,12 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
 /**
  * Start the HTTP server if not already running
  */
-export async function ensureServerRunning(): Promise<number> {
+export async function ensureServerRunning(overridePort?: number): Promise<number> {
   if (server && serverPort) {
     return serverPort;
   }
 
-  const port = getPort();
+  const port = overridePort ?? getPort();
   const webDistPath = getWebDistPath();
 
   server = Deno.serve({ port, hostname: "127.0.0.1" }, async (req) => {
@@ -320,10 +320,12 @@ export async function ensureServerRunning(): Promise<number> {
     return await serveStaticFile(pathname, webDistPath);
   });
 
-  serverPort = port;
-  console.error(`[mcp-wallet-signer] HTTP server running on http://127.0.0.1:${port}`);
+  // When port 0 is requested, the OS assigns a free port — read it back
+  const addr = server.addr as Deno.NetAddr;
+  serverPort = addr.port;
+  console.error(`[mcp-wallet-signer] HTTP server running on http://127.0.0.1:${serverPort}`);
 
-  return port;
+  return serverPort;
 }
 
 /**
@@ -342,4 +344,40 @@ export async function stopServer(): Promise<void> {
     server = null;
     serverPort = null;
   }
+}
+
+/**
+ * Start an independent test server on a random port.
+ * Returns { port, stop } — does NOT touch the module-level singleton.
+ */
+export function startTestServer(): { port: number; stop: () => Promise<void> } {
+  const webDistPath = getWebDistPath();
+
+  const srv = Deno.serve({ port: 0, hostname: "127.0.0.1" }, async (req) => {
+    const url = new URL(req.url);
+    const pathname = url.pathname;
+
+    if (pathname.startsWith("/api/")) {
+      let body: unknown = null;
+      if (req.method === "POST") {
+        try {
+          body = await req.json();
+        } catch {
+          return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+      return handleApiRequest(pathname, req.method, body);
+    }
+
+    return await serveStaticFile(pathname, webDistPath);
+  });
+
+  const addr = srv.addr as Deno.NetAddr;
+  return {
+    port: addr.port,
+    stop: () => srv.shutdown(),
+  };
 }

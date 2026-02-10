@@ -1,7 +1,8 @@
 /**
  * Mock wallet provider for Playwright e2e tests.
  *
- * Generates a script that creates a mock `window.ethereum` in the browser.
+ * Generates a script that creates a mock wallet in the browser,
+ * announcing it via EIP-6963 events and setting window.ethereum as fallback.
  * The mock returns fake signatures/hashes since we're testing UI flow.
  */
 
@@ -11,14 +12,36 @@ export const TEST_PRIVATE_KEY =
 export const TEST_ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 export const TEST_CHAIN_ID = 1;
 
+// EIP-6963 identity
+export const TEST_WALLET_NAME = "MockWallet";
+export const TEST_WALLET_RDNS = "test.mockwallet";
+
+export interface MockWalletOptions {
+  name?: string;
+  rdns?: string;
+}
+
 /**
  * Generate the mock provider script to inject into the browser.
+ *
+ * Sets up both:
+ * 1. EIP-6963 announcements (primary — mipd store picks these up)
+ * 2. window.ethereum fallback (legacy path)
  */
-export function getMockProviderScript(address: string, chainId: number): string {
+export function getMockProviderScript(
+  address: string,
+  chainId: number,
+  options?: MockWalletOptions,
+): string {
+  const name = options?.name ?? TEST_WALLET_NAME;
+  const rdns = options?.rdns ?? TEST_WALLET_RDNS;
+
   return `
 (function() {
   const TEST_ADDRESS = "${address}";
   const TEST_CHAIN_ID = ${chainId};
+  const WALLET_NAME = "${name}";
+  const WALLET_RDNS = "${rdns}";
 
   function toHex(num) {
     return "0x" + num.toString(16);
@@ -31,6 +54,11 @@ export function getMockProviderScript(address: string, chainId: number): string 
   function fakeSignature(prefix) {
     return "0x" + prefix.repeat(65);
   }
+
+  // Build an SVG icon as data URI
+  const WALLET_ICON = "data:image/svg+xml;base64," + btoa(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect fill="#6366f1" width="32" height="32" rx="6"/></svg>'
+  );
 
   const handlers = {
     eth_requestAccounts: async () => {
@@ -76,8 +104,8 @@ export function getMockProviderScript(address: string, chainId: number): string 
     net_version: async () => String(TEST_CHAIN_ID),
   };
 
-  window.ethereum = {
-    isMetaMask: true,
+  // Build the EIP-1193 provider object
+  const provider = {
     _isMockProvider: true,
     selectedAddress: TEST_ADDRESS,
     chainId: toHex(TEST_CHAIN_ID),
@@ -99,15 +127,15 @@ export function getMockProviderScript(address: string, chainId: number): string 
     },
 
     on: (event, cb) => {
-      if (!window.ethereum._listeners) window.ethereum._listeners = {};
-      if (!window.ethereum._listeners[event]) window.ethereum._listeners[event] = [];
-      window.ethereum._listeners[event].push(cb);
+      if (!provider._listeners) provider._listeners = {};
+      if (!provider._listeners[event]) provider._listeners[event] = [];
+      provider._listeners[event].push(cb);
     },
 
     removeListener: (event, cb) => {
-      if (window.ethereum._listeners?.[event]) {
-        const idx = window.ethereum._listeners[event].indexOf(cb);
-        if (idx !== -1) window.ethereum._listeners[event].splice(idx, 1);
+      if (provider._listeners?.[event]) {
+        const idx = provider._listeners[event].indexOf(cb);
+        if (idx !== -1) provider._listeners[event].splice(idx, 1);
       }
     },
 
@@ -116,7 +144,39 @@ export function getMockProviderScript(address: string, chainId: number): string 
     enable: async () => [TEST_ADDRESS],
   };
 
-  console.log("[MockWallet] Injected at " + TEST_ADDRESS);
+  // Legacy fallback — set window.ethereum (no isMetaMask flag so we can
+  // verify the name comes from EIP-6963, not from the legacy detection).
+  window.ethereum = provider;
+
+  // --- EIP-6963 wallet announcement ---
+  const providerDetail = Object.freeze({
+    info: Object.freeze({
+      uuid: crypto.randomUUID(),
+      name: WALLET_NAME,
+      icon: WALLET_ICON,
+      rdns: WALLET_RDNS,
+    }),
+    provider: provider,
+  });
+
+  function announceProvider() {
+    window.dispatchEvent(
+      new CustomEvent("eip6963:announceProvider", {
+        detail: providerDetail,
+      })
+    );
+  }
+
+  // Announce immediately so any store already listening picks it up
+  announceProvider();
+
+  // Re-announce whenever a dapp requests providers
+  window.addEventListener("eip6963:requestProvider", () => {
+    console.log("[MockWallet] Received eip6963:requestProvider, re-announcing...");
+    announceProvider();
+  });
+
+  console.log("[MockWallet] Injected " + WALLET_NAME + " at " + TEST_ADDRESS + " (EIP-6963 + legacy)");
 })();
 `;
 }

@@ -4,14 +4,14 @@
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { pendingStore } from "../../src/pending-store.ts";
-import { ensureServerRunning, stopServer } from "../../src/http-server.ts";
+import { startTestServer } from "../../src/http-server.ts";
 
 Deno.test({
   name: "E2E - Sign message API flow",
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       // Create a sign message request
@@ -47,7 +47,7 @@ Deno.test({
         assertEquals(result.result, "0xSignatureHere");
       }
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });
@@ -57,7 +57,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       const { id, promise } = pendingStore.createSignMessageRequest({
@@ -81,7 +81,7 @@ Deno.test({
 
       await promise;
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });
@@ -91,7 +91,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       const domain = {
@@ -161,7 +161,7 @@ Deno.test({
         assertEquals(result.result, "0xTypedDataSignature");
       }
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });
@@ -171,7 +171,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       const { id, promise } = pendingStore.createSignTypedDataRequest({
@@ -199,7 +199,7 @@ Deno.test({
         assertEquals(result.error, "User rejected signing request");
       }
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });

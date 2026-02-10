@@ -1,20 +1,39 @@
 /**
  * Test server utilities for e2e browser tests.
- * Starts the HTTP server in-process.
+ * Starts the HTTP server in-process on a random port.
  */
 
-import { ensureServerRunning, stopServer } from "../../../src/http-server.ts";
+import { startTestServer } from "../../../src/http-server.ts";
 import { pendingStore } from "../../../src/pending-store.ts";
 
-export { stopServer };
+let baseUrl = "";
+let stopFn: (() => Promise<void>) | null = null;
 
-export const BASE_URL = "http://127.0.0.1:3847";
+export { pendingStore };
+
+export function getBaseUrl(): string {
+  return baseUrl;
+}
 
 /**
- * Start the HTTP server in-process.
+ * Start the HTTP server in-process on a random port.
  */
 export async function startServer(): Promise<number> {
-  return await ensureServerRunning();
+  const { port, stop } = startTestServer();
+  baseUrl = `http://127.0.0.1:${port}`;
+  stopFn = stop;
+  return port;
+}
+
+/**
+ * Stop the HTTP server.
+ */
+export async function stopServer(): Promise<void> {
+  if (stopFn) {
+    await stopFn();
+    stopFn = null;
+    baseUrl = "";
+  }
 }
 
 /**
@@ -24,7 +43,7 @@ export async function createTestRequest(
   type: "connect" | "send_transaction" | "sign_message" | "sign_typed_data",
   data: Record<string, unknown> = {}
 ): Promise<{ id: string }> {
-  const res = await fetch(`${BASE_URL}/api/test/create-request`, {
+  const res = await fetch(`${baseUrl}/api/test/create-request`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ type, ...data }),
@@ -44,7 +63,7 @@ export async function createTestRequest(
 export async function getTestResult(
   id: string
 ): Promise<{ success: boolean; result?: string; error?: string; pending?: boolean } | null> {
-  const res = await fetch(`${BASE_URL}/api/test/result/${id}`);
+  const res = await fetch(`${baseUrl}/api/test/result/${id}`);
 
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Failed to get result: ${res.status}`);

@@ -23,7 +23,7 @@ const TOOLS = [
   {
     name: "connect_wallet",
     description:
-      "Connect to a browser wallet (MetaMask, etc.) and get the wallet address. Opens a browser window for the user to approve the connection.",
+      "Connect to a browser wallet and get the wallet address. IMPORTANT: This tool opens a browser window where the user must approve the connection. Tell the user to switch to their browser window to approve. This tool blocks until the user acts or the request times out (5 min).",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -37,7 +37,7 @@ const TOOLS = [
   {
     name: "send_transaction",
     description:
-      "Send a transaction (ETH transfer or contract call) via the connected browser wallet. Opens a browser window for the user to review and sign the transaction.",
+      "Send a transaction (ETH transfer or contract call) via the connected browser wallet. IMPORTANT: This tool opens a browser window where the user must review and approve the transaction. Tell the user to switch to their browser window to approve. This tool blocks until the user acts or the request times out (5 min).",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -76,7 +76,7 @@ const TOOLS = [
   {
     name: "sign_message",
     description:
-      "Sign an arbitrary message using personal_sign. Opens a browser window for the user to approve the signature.",
+      "Sign an arbitrary message using personal_sign. IMPORTANT: This tool opens a browser window where the user must approve the signature. Tell the user to switch to their browser window to approve. This tool blocks until the user acts or the request times out (5 min).",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -99,7 +99,7 @@ const TOOLS = [
   {
     name: "sign_typed_data",
     description:
-      "Sign EIP-712 typed data. Opens a browser window for the user to review and approve the signature.",
+      "Sign EIP-712 typed data. IMPORTANT: This tool opens a browser window where the user must review and approve the signature. Tell the user to switch to their browser window to approve. This tool blocks until the user acts or the request times out (5 min).",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -238,13 +238,15 @@ async function handleConnectWallet(args: unknown) {
       content: [
         {
           type: "text",
-          text: `Wallet connected successfully!\nAddress: ${result.result}`,
+          text: `Approval URL: ${url}\nWallet connected successfully!\nAddress: ${result.result}`,
         },
       ],
     };
   } else {
     return {
-      content: [{ type: "text", text: `Failed to connect wallet: ${result.error}` }],
+      content: [
+        { type: "text", text: `Approval URL: ${url}\nFailed to connect wallet: ${result.error}` },
+      ],
       isError: true,
     };
   }
@@ -283,7 +285,7 @@ async function handleSendTransaction(args: unknown) {
       ? `${chain.blockExplorer}/tx/${result.result}`
       : null;
 
-    let text = `Transaction sent successfully!\nTransaction Hash: ${result.result}`;
+    let text = `Approval URL: ${url}\nTransaction sent successfully!\nTransaction Hash: ${result.result}`;
     if (explorerUrl) {
       text += `\nExplorer: ${explorerUrl}`;
     }
@@ -293,7 +295,9 @@ async function handleSendTransaction(args: unknown) {
     };
   } else {
     return {
-      content: [{ type: "text", text: `Transaction failed: ${result.error}` }],
+      content: [
+        { type: "text", text: `Approval URL: ${url}\nTransaction failed: ${result.error}` },
+      ],
       isError: true,
     };
   }
@@ -326,13 +330,15 @@ async function handleSignMessage(args: unknown) {
       content: [
         {
           type: "text",
-          text: `Message signed successfully!\nSignature: ${result.result}`,
+          text: `Approval URL: ${url}\nMessage signed successfully!\nSignature: ${result.result}`,
         },
       ],
     };
   } else {
     return {
-      content: [{ type: "text", text: `Signing failed: ${result.error}` }],
+      content: [
+        { type: "text", text: `Approval URL: ${url}\nSigning failed: ${result.error}` },
+      ],
       isError: true,
     };
   }
@@ -368,13 +374,15 @@ async function handleSignTypedData(args: unknown) {
       content: [
         {
           type: "text",
-          text: `Typed data signed successfully!\nSignature: ${result.result}`,
+          text: `Approval URL: ${url}\nTyped data signed successfully!\nSignature: ${result.result}`,
         },
       ],
     };
   } else {
     return {
-      content: [{ type: "text", text: `Signing failed: ${result.error}` }],
+      content: [
+        { type: "text", text: `Approval URL: ${url}\nSigning failed: ${result.error}` },
+      ],
       isError: true,
     };
   }

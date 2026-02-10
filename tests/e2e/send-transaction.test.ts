@@ -4,14 +4,14 @@
 
 import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { pendingStore } from "../../src/pending-store.ts";
-import { ensureServerRunning, stopServer } from "../../src/http-server.ts";
+import { startTestServer } from "../../src/http-server.ts";
 
 Deno.test({
   name: "E2E - Transaction request API flow",
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       // Create a transaction request
@@ -53,7 +53,7 @@ Deno.test({
         );
       }
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });
@@ -63,7 +63,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       // Create a contract call request
@@ -98,7 +98,7 @@ Deno.test({
         assertEquals(result.error, "User rejected transaction");
       }
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });
@@ -108,7 +108,7 @@ Deno.test({
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
-    const port = await ensureServerRunning();
+    const { port, stop } = startTestServer();
 
     try {
       const { id, promise } = pendingStore.createSendTransactionRequest({
@@ -135,7 +135,7 @@ Deno.test({
 
       await promise;
     } finally {
-      await stopServer();
+      await stop();
     }
   },
 });

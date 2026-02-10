@@ -17,7 +17,7 @@
     "dev:web": "cd web && deno task dev",
     "build": "deno task build:server && deno task build:web",
     "build:server": "deno compile --allow-net --allow-env --allow-read --allow-run --allow-sys --output dist/mcp-wallet-signer src/index.ts",
-    "build:web": "cd web && deno task build && cp -r dist ../dist/web",
+    "build:web": "cd web && deno task build && rm -rf ../dist/web && cp -r dist ../dist/web",
     "build:npm": "deno run --allow-read --allow-write --allow-env --allow-run scripts/build-npm.ts",
     "test": "deno test --allow-net --allow-env --allow-read --allow-run tests/",
     "test:e2e": "deno test --allow-net --allow-env --allow-read --allow-run tests/e2e/",

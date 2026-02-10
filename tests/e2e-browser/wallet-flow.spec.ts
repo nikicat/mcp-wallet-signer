@@ -1,8 +1,8 @@
 /**
  * Playwright e2e tests for wallet signing flows.
  *
- * Injects a mock window.ethereum into the browser, navigates to
- * connect/sign pages, clicks buttons, and verifies the API result.
+ * Injects a mock wallet via EIP-6963 events + window.ethereum fallback,
+ * navigates to connect/sign pages, clicks buttons, and verifies the API result.
  */
 
 import { test, expect, type BrowserContext } from "@playwright/test";
@@ -11,12 +11,13 @@ import {
   stopServer,
   createTestRequest,
   getTestResult,
-  BASE_URL,
+  getBaseUrl,
 } from "./fixtures/test-server.mts";
 import {
   getMockProviderScript,
   TEST_ADDRESS,
   TEST_CHAIN_ID,
+  TEST_WALLET_NAME,
 } from "./fixtures/mock-wallet.mts";
 
 test.beforeAll(async () => {
@@ -43,10 +44,11 @@ test.describe("Wallet Connection", () => {
     const page = await ctx.newPage();
 
     const { id } = await createTestRequest("connect", { chainId: TEST_CHAIN_ID });
-    await page.goto(`${BASE_URL}/connect/${id}`);
+    await page.goto(`${getBaseUrl()}/connect/${id}`);
 
     await expect(page.getByRole("heading", { name: "Connect Wallet" })).toBeVisible();
-    await expect(page.getByText("MetaMask")).toBeVisible();
+    await expect(page.getByText(TEST_WALLET_NAME)).toBeVisible();
+    await expect(page.locator("img.wallet-icon")).toBeVisible();
 
     await page.getByRole("button", { name: "Connect" }).click();
     await expect(page.getByText("Connected!")).toBeVisible({ timeout: 10000 });
@@ -63,7 +65,7 @@ test.describe("Wallet Connection", () => {
     const ctx = await walletContext(browser);
     const page = await ctx.newPage();
 
-    await page.goto(`${BASE_URL}/connect/00000000-0000-0000-0000-000000000000`);
+    await page.goto(`${getBaseUrl()}/connect/00000000-0000-0000-0000-000000000000`);
     await expect(page.getByText("Request Not Found")).toBeVisible();
 
     await ctx.close();
@@ -74,7 +76,7 @@ test.describe("Wallet Connection", () => {
     const page = await ctx.newPage();
 
     const { id } = await createTestRequest("connect", { chainId: TEST_CHAIN_ID });
-    await page.goto(`${BASE_URL}/connect/${id}`);
+    await page.goto(`${getBaseUrl()}/connect/${id}`);
 
     await expect(page.getByRole("heading", { name: "Connect Wallet" })).toBeVisible();
     await expect(page.getByText("No wallet detected")).toBeVisible();
@@ -96,7 +98,7 @@ test.describe("Transaction Signing", () => {
       chainId: TEST_CHAIN_ID,
     });
 
-    await page.goto(`${BASE_URL}/sign/${id}`);
+    await page.goto(`${getBaseUrl()}/sign/${id}`);
     await expect(page.getByRole("heading", { name: "Send Transaction" })).toBeVisible();
     await expect(
       page.getByText("0x70997970C51812dc3A010C7d01b50e0d17dc79C8", { exact: false })
@@ -122,7 +124,7 @@ test.describe("Transaction Signing", () => {
       chainId: TEST_CHAIN_ID,
     });
 
-    await page.goto(`${BASE_URL}/sign/${id}`);
+    await page.goto(`${getBaseUrl()}/sign/${id}`);
     await expect(page.getByRole("heading", { name: "Send Transaction" })).toBeVisible();
 
     await page.getByRole("button", { name: "Reject" }).click();
@@ -148,7 +150,7 @@ test.describe("Message Signing", () => {
       chainId: TEST_CHAIN_ID,
     });
 
-    await page.goto(`${BASE_URL}/sign/${id}`);
+    await page.goto(`${getBaseUrl()}/sign/${id}`);
     await expect(page.getByRole("heading", { name: "Sign Message" })).toBeVisible();
     await expect(page.getByText("Hello, Ethereum!")).toBeVisible();
 
@@ -174,7 +176,7 @@ test.describe("Message Signing", () => {
       chainId: TEST_CHAIN_ID,
     });
 
-    await page.goto(`${BASE_URL}/sign/${id}`);
+    await page.goto(`${getBaseUrl()}/sign/${id}`);
     await expect(page.getByRole("heading", { name: "Sign Typed Data" })).toBeVisible();
     await expect(page.getByText("Typed Data (EIP-712)")).toBeVisible();
 
