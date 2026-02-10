@@ -8,6 +8,7 @@ import { ensureServerRunning } from "./http-server.ts";
 import { buildConnectUrl, buildSignUrl, openBrowser } from "./browser.ts";
 import { CHAINS, getDefaultChainId, getRpcUrl } from "./config.ts";
 import { ConnectWalletSchema, GetBalanceSchema, SendTransactionSchema, SignMessageSchema, SignTypedDataSchema } from "./types.ts";
+import pkg from "../package.json" with { type: "json" };
 
 // Tool definitions
 const TOOLS = [
@@ -156,7 +157,7 @@ export function createMcpServer(): Server {
   const server = new Server(
     {
       name: "mcp-wallet-signer",
-      version: "0.1.0",
+      version: pkg.version,
     },
     {
       capabilities: {
