@@ -1,8 +1,8 @@
 import type {
-  PendingRequest,
-  PendingEntry,
-  RequestResult,
   ConnectRequest,
+  PendingEntry,
+  PendingRequest,
+  RequestResult,
   SendTransactionRequest,
   SignMessageRequest,
   SignTypedDataRequest,

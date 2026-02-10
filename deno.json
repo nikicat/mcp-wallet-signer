@@ -31,7 +31,7 @@
   },
   "fmt": {
     "useTabs": false,
-    "lineWidth": 100,
+    "lineWidth": 130,
     "indentWidth": 2,
     "singleQuote": false
   },

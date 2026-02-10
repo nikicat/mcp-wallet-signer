@@ -57,7 +57,9 @@ Deno.test({
 
       // Clean up
       pendingStore.cancel(id);
-      try { await promise; } catch { /* expected */ }
+      try {
+        await promise;
+      } catch { /* expected */ }
     } finally {
       await stop();
     }
@@ -205,7 +207,9 @@ Deno.test({
 
       // Clean up
       pendingStore.cancel(id);
-      try { await promise; } catch { /* expected */ }
+      try {
+        await promise;
+      } catch { /* expected */ }
     } finally {
       await stop();
     }

@@ -174,12 +174,15 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
 
   // GET /api/health - Health check
   if (pathname === "/api/health" && method === "GET") {
-    return new Response(JSON.stringify({
-      status: "ok",
-      pendingRequests: pendingStore.size,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        status: "ok",
+        pendingRequests: pendingStore.size,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 
   // === Test endpoints (for e2e browser testing) ===

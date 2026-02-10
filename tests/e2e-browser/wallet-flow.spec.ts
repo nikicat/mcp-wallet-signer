@@ -5,20 +5,9 @@
  * navigates to connect/sign pages, clicks buttons, and verifies the API result.
  */
 
-import { test, expect, type BrowserContext } from "@playwright/test";
-import {
-  startServer,
-  stopServer,
-  createTestRequest,
-  getTestResult,
-  getBaseUrl,
-} from "./fixtures/test-server.mts";
-import {
-  getMockProviderScript,
-  TEST_ADDRESS,
-  TEST_CHAIN_ID,
-  TEST_WALLET_NAME,
-} from "./fixtures/mock-wallet.mts";
+import { type BrowserContext, expect, test } from "@playwright/test";
+import { createTestRequest, getBaseUrl, getTestResult, startServer, stopServer } from "./fixtures/test-server.mts";
+import { getMockProviderScript, TEST_ADDRESS, TEST_CHAIN_ID, TEST_WALLET_NAME } from "./fixtures/mock-wallet.mts";
 
 test.beforeAll(async () => {
   await startServer();
@@ -29,7 +18,7 @@ test.afterAll(async () => {
 });
 
 async function walletContext(
-  browser: import("@playwright/test").Browser
+  browser: import("@playwright/test").Browser,
 ): Promise<BrowserContext> {
   const ctx = await browser.newContext();
   await ctx.addInitScript(getMockProviderScript(TEST_ADDRESS, TEST_CHAIN_ID));
@@ -101,7 +90,7 @@ test.describe("Transaction Signing", () => {
     await page.goto(`${getBaseUrl()}/sign/${id}`);
     await expect(page.getByRole("heading", { name: "Send Transaction" })).toBeVisible();
     await expect(
-      page.getByText("0x70997970C51812dc3A010C7d01b50e0d17dc79C8", { exact: false })
+      page.getByText("0x70997970C51812dc3A010C7d01b50e0d17dc79C8", { exact: false }),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Sign & Send" }).click();

@@ -1,22 +1,13 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
-import { createPublicClient, http, formatEther } from "viem";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { createPublicClient, formatEther, http } from "viem";
 
 import { pendingStore } from "./pending-store.ts";
 import { ensureServerRunning } from "./http-server.ts";
-import { openBrowser, buildConnectUrl, buildSignUrl } from "./browser.ts";
-import { getDefaultChainId, getRpcUrl, CHAINS } from "./config.ts";
-import {
-  ConnectWalletSchema,
-  SendTransactionSchema,
-  SignMessageSchema,
-  SignTypedDataSchema,
-  GetBalanceSchema,
-} from "./types.ts";
+import { buildConnectUrl, buildSignUrl, openBrowser } from "./browser.ts";
+import { CHAINS, getDefaultChainId, getRpcUrl } from "./config.ts";
+import { ConnectWalletSchema, GetBalanceSchema, SendTransactionSchema, SignMessageSchema, SignTypedDataSchema } from "./types.ts";
 
 // Tool definitions
 const TOOLS = [
@@ -140,8 +131,7 @@ const TOOLS = [
   },
   {
     name: "get_balance",
-    description:
-      "Get the ETH balance of an address. Does not require browser interaction - reads directly from the blockchain.",
+    description: "Get the ETH balance of an address. Does not require browser interaction - reads directly from the blockchain.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -172,7 +162,7 @@ export function createMcpServer(): Server {
       capabilities: {
         tools: {},
       },
-    }
+    },
   );
 
   // List available tools
@@ -281,9 +271,7 @@ async function handleSendTransaction(args: unknown) {
   if (result.success) {
     const chainId = parsed.data.chainId || getDefaultChainId();
     const chain = CHAINS[chainId];
-    const explorerUrl = chain?.blockExplorer
-      ? `${chain.blockExplorer}/tx/${result.result}`
-      : null;
+    const explorerUrl = chain?.blockExplorer ? `${chain.blockExplorer}/tx/${result.result}` : null;
 
     let text = `Approval URL: ${url}\nTransaction sent successfully!\nTransaction Hash: ${result.result}`;
     if (explorerUrl) {

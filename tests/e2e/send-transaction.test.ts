@@ -49,7 +49,7 @@ Deno.test({
       if (result.success) {
         assertEquals(
           result.result,
-          "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+          "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
         );
       }
     } finally {

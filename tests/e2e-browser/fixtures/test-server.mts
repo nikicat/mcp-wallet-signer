@@ -41,7 +41,7 @@ export async function stopServer(): Promise<void> {
  */
 export async function createTestRequest(
   type: "connect" | "send_transaction" | "sign_message" | "sign_typed_data",
-  data: Record<string, unknown> = {}
+  data: Record<string, unknown> = {},
 ): Promise<{ id: string }> {
   const res = await fetch(`${baseUrl}/api/test/create-request`, {
     method: "POST",
@@ -61,7 +61,7 @@ export async function createTestRequest(
  * Get the result of a completed request.
  */
 export async function getTestResult(
-  id: string
+  id: string,
 ): Promise<{ success: boolean; result?: string; error?: string; pending?: boolean } | null> {
   const res = await fetch(`${baseUrl}/api/test/result/${id}`);
 

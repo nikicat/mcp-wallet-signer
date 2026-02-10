@@ -89,7 +89,7 @@ Deno.test("PendingStore - cancels request", async () => {
   await assertRejects(
     () => promise,
     Error,
-    "Cancelled by test"
+    "Cancelled by test",
   );
 });
 
