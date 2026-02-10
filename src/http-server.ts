@@ -5,6 +5,9 @@ import type { CompleteApiRequest, PendingApiResponse } from "./types.ts";
 let server: Deno.HttpServer | null = null;
 let serverPort: number | null = null;
 
+// Store test results for e2e browser testing
+const testResults = new Map<string, { success: boolean; result?: string; error?: string }>();
+
 /**
  * Get the path to the bundled web UI
  */
@@ -175,6 +178,103 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
       status: "ok",
       pendingRequests: pendingStore.size,
     }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // === Test endpoints (for e2e browser testing) ===
+
+  // POST /api/test/create-request - Create a pending request for testing
+  if (pathname === "/api/test/create-request" && method === "POST") {
+    const data = body as Record<string, unknown>;
+    const type = data.type as string;
+
+    let id: string;
+    let promise: Promise<unknown>;
+
+    switch (type) {
+      case "connect": {
+        const result = pendingStore.createConnectRequest(data.chainId as number | undefined);
+        id = result.id;
+        promise = result.promise;
+        break;
+      }
+      case "send_transaction": {
+        const result = pendingStore.createSendTransactionRequest({
+          to: data.to as string,
+          value: data.value as string | undefined,
+          data: data.data as string | undefined,
+          chainId: data.chainId as number | undefined,
+          gasLimit: data.gasLimit as string | undefined,
+          maxFeePerGas: data.maxFeePerGas as string | undefined,
+          maxPriorityFeePerGas: data.maxPriorityFeePerGas as string | undefined,
+        });
+        id = result.id;
+        promise = result.promise;
+        break;
+      }
+      case "sign_message": {
+        const result = pendingStore.createSignMessageRequest({
+          message: data.message as string,
+          address: data.address as string | undefined,
+          chainId: data.chainId as number | undefined,
+        });
+        id = result.id;
+        promise = result.promise;
+        break;
+      }
+      case "sign_typed_data": {
+        const result = pendingStore.createSignTypedDataRequest({
+          domain: data.domain as Parameters<typeof pendingStore.createSignTypedDataRequest>[0]["domain"],
+          types: data.types as Parameters<typeof pendingStore.createSignTypedDataRequest>[0]["types"],
+          primaryType: data.primaryType as string,
+          message: data.message as Record<string, unknown>,
+          address: data.address as string | undefined,
+          chainId: data.chainId as number | undefined,
+        });
+        id = result.id;
+        promise = result.promise;
+        break;
+      }
+      default:
+        return new Response(JSON.stringify({ error: "Invalid request type" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+    }
+
+    // Store the promise result for later retrieval
+    promise.then((result) => {
+      testResults.set(id, result as { success: boolean; result?: string; error?: string });
+    }).catch((err) => {
+      testResults.set(id, { success: false, error: err.message });
+    });
+
+    return new Response(JSON.stringify({ id }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // GET /api/test/result/:id - Get test result
+  const testResultMatch = pathname.match(/^\/api\/test\/result\/([a-f0-9-]+)$/);
+  if (testResultMatch && method === "GET") {
+    const id = testResultMatch[1];
+    const result = testResults.get(id);
+
+    if (result === undefined) {
+      // Check if request is still pending
+      if (pendingStore.has(id)) {
+        return new Response(JSON.stringify({ pending: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ error: "Result not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

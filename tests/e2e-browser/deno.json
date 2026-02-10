@@ -1,0 +1,11 @@
+{
+  "tasks": {
+    "prepare": "deno cache --node-modules-dir playwright.config.ts wallet-flow.spec.ts",
+    "test": "deno task prepare && deno run -A npm:@playwright/test@latest/cli test",
+    "test:ui": "deno task prepare && deno run -A npm:@playwright/test@latest/cli test --ui"
+  },
+  "imports": {
+    "@playwright/test": "npm:@playwright/test@1.58.2"
+  },
+  "nodeModulesDir": "auto"
+}

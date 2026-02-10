@@ -1,5 +1,3 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-run
-
 /**
  * Build script for npm package.
  *
