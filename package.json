@@ -19,15 +19,18 @@
     "ethereum",
     "evm",
     "metamask",
+    "eip-6963",
+    "browser-wallet",
+    "signing",
     "blockchain",
     "web3",
     "claude"
   ],
-  "author": "",
+  "author": "Nikolay Bryskin",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/mcp-wallet-signer"
+    "url": "https://github.com/nikicat/mcp-wallet-signer"
   },
   "engines": {
     "node": ">=18"
@@ -36,8 +39,6 @@
     "@modelcontextprotocol/sdk": "^1.0.4",
     "viem": "^2.21.0",
     "zod": "^3.23.8",
-    "open": "^10.1.0",
-    "express": "^4.21.0",
-    "cors": "^2.8.5"
+    "open": "^10.1.0"
   }
 }

@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Lint
+        run: deno task lint
+
+      - name: Format check
+        run: deno fmt --check src/ tests/
+
+      - name: Type check
+        run: deno task check
+
+      - name: Unit & e2e tests
+        run: deno task test
+
+      - name: Install Playwright Chromium
+        run: deno task playwright:install
+
+      - name: Browser tests
+        run: deno task test:browser

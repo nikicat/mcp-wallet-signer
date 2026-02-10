@@ -26,7 +26,8 @@
     "playwright:install": "deno run -A npm:@playwright/test@latest/cli install chromium",
     "check": "deno check src/**/*.ts",
     "fmt": "deno fmt src/ tests/",
-    "lint": "deno lint src/ tests/"
+    "lint": "deno lint src/ tests/",
+    "publish:npm": "npm publish"
   },
   "fmt": {
     "useTabs": false,
