@@ -1,0 +1,38 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.nikicat/mcp-wallet-signer",
+  "version": "0.1.3",
+  "title": "EVM Wallet Signer",
+  "description": "Route EVM transactions to browser wallets (MetaMask, etc.) for signing via EIP-6963",
+  "websiteUrl": "https://github.com/nikicat/mcp-wallet-signer",
+  "repository": {
+    "url": "https://github.com/nikicat/mcp-wallet-signer",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "mcp-wallet-signer",
+      "version": "0.1.3",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeHint": "npx",
+      "environmentVariables": [
+        {
+          "name": "EVM_MCP_PORT",
+          "description": "HTTP server port for the browser approval UI (default: 3847)",
+          "isRequired": false,
+          "default": "3847"
+        },
+        {
+          "name": "EVM_MCP_DEFAULT_CHAIN",
+          "description": "Default EVM chain ID (default: 1 for Ethereum mainnet)",
+          "isRequired": false,
+          "default": "1"
+        }
+      ]
+    }
+  ]
+}
