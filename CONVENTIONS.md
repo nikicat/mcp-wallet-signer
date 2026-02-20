@@ -9,7 +9,7 @@
 
 ## Formatting & Linting
 
-Enforced by `deno fmt` and `deno lint` — see `deno.json` for config.
+Enforced by `deno fmt` and `deno lint` — see `deno.jsonc` for config.
 
 - 2-space indentation, no tabs
 - Double quotes

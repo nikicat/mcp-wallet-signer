@@ -4,6 +4,7 @@ web/node_modules/
 
 # Build output
 dist/
+npm/
 web/dist/
 
 # IDE
@@ -23,7 +24,6 @@ test-results/
 *.log
 npm-debug.log*
 
-# Environment
-.env
-.env.local
-.env.*.local
+# Dotfiles (tokens, credentials, local config)
+.*
+!.gitignore

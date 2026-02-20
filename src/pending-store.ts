@@ -20,7 +20,7 @@ const REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
  * Store for pending signing requests.
  * Each request creates a Promise that resolves when the browser completes the signing.
  */
-class PendingStore {
+export class PendingStore {
   private pending: Map<string, PendingEntry> = new Map();
   private timeouts: Map<string, number> = new Map();
 

@@ -1,14 +1,11 @@
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 
 import { getPort } from "./config.ts";
-import { pendingStore } from "./pending-store.ts";
+import { PendingStore, pendingStore as defaultPendingStore } from "./pending-store.ts";
 import type { CompleteApiRequest, PendingApiResponse } from "./types.ts";
-
-let server: Server | null = null;
-let serverPort: number | null = null;
 
 // Store test results for e2e browser testing
 const testResults = new Map<string, { success: boolean; result?: string; error?: string }>();
@@ -17,26 +14,27 @@ const testResults = new Map<string, { success: boolean; result?: string; error?:
  * Get the path to the bundled web UI
  */
 function getWebDistPath(): string {
-  // In development, serve from web/dist
-  // In production (npm package), serve from dist/web
   const scriptDir = new URL(".", import.meta.url).pathname;
 
-  // Try production path first (dist/web relative to dist/)
-  const prodPath = `${scriptDir}../dist/web`;
-  try {
-    statSync(prodPath);
-    return prodPath;
-  } catch {
-    // Fall back to development path
-    const devPath = `${scriptDir}../web/dist`;
+  // Try candidate paths in order. dnt outputs to esm/, so the package root
+  // is one level up; esbuild outputs to dist/ (also one level up); dev is web/dist.
+  const candidates = [
+    `${scriptDir}../web`, // dnt: esm/ → package root → web/
+    `${scriptDir}../dist/web`, // esbuild: dist/ → dist/web
+    `${scriptDir}../web/dist`, // dev: src/ → web/dist
+  ];
+
+  for (const candidate of candidates) {
     try {
-      statSync(devPath);
-      return devPath;
+      statSync(candidate);
+      return candidate;
     } catch {
-      // If neither exists, return production path (will fail later with clear error)
-      return prodPath;
+      // try next
     }
   }
+
+  // Fallback — will fail later with a clear error from serveStaticFile
+  return candidates[0];
 }
 
 /**
@@ -107,7 +105,7 @@ function getContentType(path: string): string {
 /**
  * Handle API requests
  */
-function handleApiRequest(pathname: string, method: string, body: unknown): Response {
+function handleApiRequest(pathname: string, method: string, body: unknown, store: PendingStore): Response {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -123,7 +121,7 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
   const pendingMatch = pathname.match(/^\/api\/pending\/([a-f0-9-]+)$/);
   if (pendingMatch && method === "GET") {
     const id = pendingMatch[1];
-    const request = pendingStore.get(id);
+    const request = store.get(id);
 
     if (!request) {
       return new Response(JSON.stringify({ error: "Request not found" }), {
@@ -143,7 +141,7 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
   if (completeMatch && method === "POST") {
     const id = completeMatch[1];
 
-    if (!pendingStore.has(id)) {
+    if (!store.has(id)) {
       return new Response(JSON.stringify({ error: "Request not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -163,7 +161,7 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
       ? { success: true as const, result: data.result || "" }
       : { success: false as const, error: data.error || "Unknown error" };
 
-    const completed = pendingStore.complete(id, result);
+    const completed = store.complete(id, result);
 
     if (!completed) {
       return new Response(JSON.stringify({ error: "Failed to complete request" }), {
@@ -182,7 +180,7 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
     return new Response(
       JSON.stringify({
         status: "ok",
-        pendingRequests: pendingStore.size,
+        pendingRequests: store.size,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -202,13 +200,13 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
 
     switch (type) {
       case "connect": {
-        const result = pendingStore.createConnectRequest(data.chainId as number | undefined);
+        const result = store.createConnectRequest(data.chainId as number | undefined);
         id = result.id;
         promise = result.promise;
         break;
       }
       case "send_transaction": {
-        const result = pendingStore.createSendTransactionRequest({
+        const result = store.createSendTransactionRequest({
           to: data.to as string,
           value: data.value as string | undefined,
           data: data.data as string | undefined,
@@ -222,7 +220,7 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
         break;
       }
       case "sign_message": {
-        const result = pendingStore.createSignMessageRequest({
+        const result = store.createSignMessageRequest({
           message: data.message as string,
           address: data.address as string | undefined,
           chainId: data.chainId as number | undefined,
@@ -232,9 +230,9 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
         break;
       }
       case "sign_typed_data": {
-        const result = pendingStore.createSignTypedDataRequest({
-          domain: data.domain as Parameters<typeof pendingStore.createSignTypedDataRequest>[0]["domain"],
-          types: data.types as Parameters<typeof pendingStore.createSignTypedDataRequest>[0]["types"],
+        const result = store.createSignTypedDataRequest({
+          domain: data.domain as Parameters<typeof store.createSignTypedDataRequest>[0]["domain"],
+          types: data.types as Parameters<typeof store.createSignTypedDataRequest>[0]["types"],
           primaryType: data.primaryType as string,
           message: data.message as Record<string, unknown>,
           address: data.address as string | undefined,
@@ -271,7 +269,7 @@ function handleApiRequest(pathname: string, method: string, body: unknown): Resp
 
     if (result === undefined) {
       // Check if request is still pending
-      if (pendingStore.has(id)) {
+      if (store.has(id)) {
         return new Response(JSON.stringify({ pending: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -322,7 +320,7 @@ async function writeResponse(res: ServerResponse, response: Response): Promise<v
 /**
  * Create a node:http request handler using the existing Response-based logic.
  */
-function makeHandler(webDistPath: string) {
+function makeHandler(webDistPath: string, store: PendingStore) {
   return async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url!, `http://${req.headers.host || "127.0.0.1"}`);
     const pathname = url.pathname;
@@ -345,7 +343,7 @@ function makeHandler(webDistPath: string) {
           return;
         }
       }
-      response = handleApiRequest(pathname, method, body);
+      response = handleApiRequest(pathname, method, body, store);
     } else {
       response = await serveStaticFile(pathname, webDistPath);
     }
@@ -355,68 +353,37 @@ function makeHandler(webDistPath: string) {
 }
 
 /**
- * Start the HTTP server if not already running
+ * Create an HTTP server bound to a PendingStore.
+ * Returns the port and a stop function.
  */
-export async function ensureServerRunning(overridePort?: number): Promise<number> {
-  if (server && serverPort) {
-    return serverPort;
-  }
-
-  const port = overridePort ?? getPort();
+export async function createHttpServer(
+  store: PendingStore,
+  port?: number,
+): Promise<{ port: number; stop: () => Promise<void> }> {
+  const targetPort = port ?? getPort();
   const webDistPath = getWebDistPath();
 
-  const srv = createServer(makeHandler(webDistPath));
+  const srv = createServer(makeHandler(webDistPath, store));
 
   await new Promise<void>((resolve) => {
-    srv.listen(port, "127.0.0.1", () => resolve());
+    srv.listen(targetPort, "127.0.0.1", () => resolve());
   });
 
-  server = srv;
-  serverPort = (srv.address() as AddressInfo).port;
-  console.error(`[mcp-wallet-signer] HTTP server running on http://127.0.0.1:${serverPort}`);
+  const actualPort = (srv.address() as AddressInfo).port;
+  console.error(`[mcp-wallet-signer] HTTP server running on http://127.0.0.1:${actualPort}`);
 
-  return serverPort;
-}
-
-/**
- * Get the current server port (if running)
- */
-export function getServerPort(): number | null {
-  return serverPort;
-}
-
-/**
- * Stop the HTTP server
- */
-export async function stopServer(): Promise<void> {
-  if (server) {
-    await new Promise<void>((resolve, reject) => {
-      server!.close((err) => (err ? reject(err) : resolve()));
-    });
-    server = null;
-    serverPort = null;
-  }
-}
-
-/**
- * Start an independent test server on a random port.
- * Returns { port, stop } — does NOT touch the module-level singleton.
- */
-export async function startTestServer(): Promise<{ port: number; stop: () => Promise<void> }> {
-  const webDistPath = getWebDistPath();
-
-  const srv = createServer(makeHandler(webDistPath));
-
-  await new Promise<void>((resolve) => {
-    srv.listen(0, "127.0.0.1", () => resolve());
-  });
-
-  const addr = srv.address() as AddressInfo;
   return {
-    port: addr.port,
+    port: actualPort,
     stop: () =>
       new Promise<void>((resolve, reject) => {
         srv.close((err) => (err ? reject(err) : resolve()));
       }),
   };
+}
+
+/**
+ * Start a test server on a random port using the default PendingStore.
+ */
+export function startTestServer(): Promise<{ port: number; stop: () => Promise<void> }> {
+  return createHttpServer(defaultPendingStore, 0);
 }

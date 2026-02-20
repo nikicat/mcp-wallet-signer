@@ -3,16 +3,6 @@
   "mcpName": "io.github.nikicat/mcp-wallet-signer",
   "version": "0.1.5",
   "description": "MCP server that routes blockchain transactions to browser wallets for signing",
-  "type": "module",
-  "bin": {
-    "mcp-wallet-signer": "./dist/index.js"
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "prepublishOnly": "echo 'Run deno task build:npm first'"
-  },
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -38,11 +28,5 @@
   },
   "engines": {
     "node": ">=18"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4",
-    "viem": "^2.21.0",
-    "zod": "^3.23.8",
-    "open": "^10.1.0"
   }
 }

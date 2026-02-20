@@ -1,19 +1,19 @@
 /**
- * Build script for npm package.
+ * Build script for npm package using dnt (Deno to Node Transform).
  *
  * This script:
- * 1. Compiles TypeScript server to JavaScript using esbuild
+ * 1. Compiles TypeScript to JS + .d.ts via dnt
  * 2. Builds the Svelte web UI
- * 3. Copies everything to dist/
+ * 3. Copies web assets into the npm output directory
  */
 
-import { ensureDir, copy } from "https://deno.land/std@0.224.0/fs/mod.ts";
-import { join, dirname, fromFileUrl } from "https://deno.land/std@0.224.0/path/mod.ts";
+import { build, emptyDir } from "jsr:@deno/dnt";
+import { copy } from "https://deno.land/std@0.224.0/fs/mod.ts";
+import { dirname, fromFileUrl, join } from "https://deno.land/std@0.224.0/path/mod.ts";
 
 const scriptDir = dirname(fromFileUrl(import.meta.url));
 const projectDir = join(scriptDir, "..");
-const distDir = join(projectDir, "dist");
-const srcDir = join(projectDir, "src");
+const outDir = join(projectDir, "npm");
 const webDir = join(projectDir, "web");
 
 async function run(cmd: string[], cwd?: string): Promise<void> {
@@ -30,64 +30,57 @@ async function run(cmd: string[], cwd?: string): Promise<void> {
   }
 }
 
-async function main() {
-  console.log("Building MCP Wallet Signer for npm...\n");
+// Read metadata from root package.json
+const pkg = JSON.parse(await Deno.readTextFile(join(projectDir, "package.json")));
 
-  // Clean dist directory
-  console.log("1. Cleaning dist directory...");
-  try {
-    await Deno.remove(distDir, { recursive: true });
-  } catch {
-    // Directory doesn't exist, that's fine
-  }
-  await ensureDir(distDir);
+await emptyDir(outDir);
 
-  // Build server with esbuild (bundle for Node.js)
-  console.log("\n2. Building server with esbuild...");
-  await run([
-    "deno",
-    "run",
-    "--allow-read",
-    "--allow-write",
-    "--allow-env",
-    "--allow-run",
-    "--allow-net",
-    "npm:esbuild",
-    join(srcDir, "index.ts"),
-    "--bundle",
-    "--platform=node",
-    "--target=node18",
-    "--format=esm",
-    "--outfile=" + join(distDir, "index.js"),
-    "--external:@modelcontextprotocol/sdk",
-    "--external:viem",
-    "--external:zod",
-    "--external:open",
-    "--banner:js=#!/usr/bin/env node",
-  ]);
-
-  // Make the output executable
-  await Deno.chmod(join(distDir, "index.js"), 0o755);
-
-  // Build web UI
-  console.log("\n3. Building web UI...");
-  await run(["deno", "install"], webDir);
-  await run(["deno", "task", "build"], webDir);
-
-  // Copy web dist to dist/web
-  console.log("\n4. Copying web assets...");
-  const webDistDir = join(webDir, "dist");
-  const targetWebDir = join(distDir, "web");
-  await copy(webDistDir, targetWebDir);
-
-  console.log("\n✓ Build complete!");
-  console.log(`  Output: ${distDir}`);
-  console.log("\nTo publish to npm:");
-  console.log("  cd " + projectDir);
-  console.log("  npm publish");
-}
-
-main().catch((err) => {
-  console.error("Build failed:", err);
-  Deno.exit(1);
+// 1. Build TypeScript with dnt
+console.log("1. Building TypeScript with dnt...\n");
+await build({
+  entryPoints: [
+    "./src/mod.ts",
+    { kind: "bin", name: "mcp-wallet-signer", path: "./src/index.ts" },
+  ],
+  outDir,
+  shims: {},
+  scriptModule: false,
+  typeCheck: false,
+  test: false,
+  importMap: "./deno.jsonc",
+  package: {
+    name: pkg.name,
+    version: pkg.version,
+    description: pkg.description,
+    type: "module",
+    license: pkg.license,
+    repository: pkg.repository,
+    author: pkg.author,
+    keywords: pkg.keywords,
+    engines: pkg.engines,
+  },
+  postBuild() {
+    // Add web to published files in the generated package.json
+    const genPkgPath = join(outDir, "package.json");
+    const genPkg = JSON.parse(Deno.readTextFileSync(genPkgPath));
+    genPkg.mcpName = pkg.mcpName;
+    // dnt doesn't detect trailing-slash import map entries, so inject manually
+    genPkg.dependencies ??= {};
+    genPkg.dependencies["@modelcontextprotocol/sdk"] = "^1.0.4";
+    Deno.writeTextFileSync(genPkgPath, JSON.stringify(genPkg, null, 2) + "\n");
+  },
 });
+
+// 2. Build web UI
+console.log("\n2. Building web UI...");
+await run(["deno", "install"], webDir);
+await run(["deno", "task", "build"], webDir);
+
+// 3. Copy web assets into npm output
+console.log("\n3. Copying web assets...");
+await copy(join(webDir, "dist"), join(outDir, "web"));
+
+console.log("\n✓ Build complete!");
+console.log(`  Output: ${outDir}`);
+console.log("\nTo publish to npm:");
+console.log(`  cd ${outDir} && npm publish`);

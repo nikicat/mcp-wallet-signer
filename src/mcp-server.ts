@@ -8,14 +8,11 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { createPublicClient, formatEther, http } from "viem";
 
-import { pendingStore } from "./pending-store.ts";
-import { ensureServerRunning } from "./http-server.ts";
-import { buildConnectUrl, buildSignUrl, openBrowser } from "./browser.ts";
-import { CHAINS, getDefaultChainId, getPort, getRpcUrl } from "./config.ts";
+import { WalletSigner } from "./wallet-signer.ts";
+import { CHAINS, getDefaultChainId, getPort } from "./config.ts";
 import { ConnectWalletSchema, GetBalanceSchema, SendTransactionSchema, SignMessageSchema, SignTypedDataSchema } from "./types.ts";
-import pkg from "../package.json" with { type: "json" };
+import { VERSION } from "./version.ts";
 
 // Tool definitions
 const TOOLS = [
@@ -157,14 +154,25 @@ const TOOLS = [
   },
 ];
 
+function textResult(text: string) {
+  return { content: [{ type: "text" as const, text }] };
+}
+
+function errorResult(message: string) {
+  return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
+}
+
 /**
- * Create and configure the MCP server
+ * Create and configure the MCP server.
+ * If a WalletSigner is provided it will be used; otherwise a new one is created.
  */
-export function createMcpServer(): Server {
+export function createMcpServer(signer?: WalletSigner): Server {
+  const walletSigner = signer ?? new WalletSigner();
+
   const server = new Server(
     {
       name: "mcp-wallet-signer",
-      version: pkg.version,
+      version: VERSION,
     },
     {
       capabilities: {
@@ -337,251 +345,59 @@ export function createMcpServer(): Server {
 
     try {
       switch (name) {
-        case "connect_wallet":
-          return await handleConnectWallet(args);
-        case "send_transaction":
-          return await handleSendTransaction(args);
-        case "sign_message":
-          return await handleSignMessage(args);
-        case "sign_typed_data":
-          return await handleSignTypedData(args);
-        case "get_balance":
-          return await handleGetBalance(args);
+        case "connect_wallet": {
+          const parsed = ConnectWalletSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { address, approvalUrl } = await walletSigner.connectWallet(parsed.data);
+          return textResult(`Approval URL: ${approvalUrl}\nWallet connected successfully!\nAddress: ${address}`);
+        }
+        case "send_transaction": {
+          const parsed = SendTransactionSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { txHash, approvalUrl } = await walletSigner.sendTransaction(parsed.data);
+          const chainId = parsed.data.chainId || walletSigner.defaultChainId;
+          const chain = CHAINS[chainId];
+          const explorerUrl = chain?.blockExplorer ? `${chain.blockExplorer}/tx/${txHash}` : null;
+          let text = `Approval URL: ${approvalUrl}\nTransaction sent successfully!\nTransaction Hash: ${txHash}`;
+          if (explorerUrl) text += `\nExplorer: ${explorerUrl}`;
+          return textResult(text);
+        }
+        case "sign_message": {
+          const parsed = SignMessageSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { signature, approvalUrl } = await walletSigner.signMessage(parsed.data);
+          return textResult(`Approval URL: ${approvalUrl}\nMessage signed successfully!\nSignature: ${signature}`);
+        }
+        case "sign_typed_data": {
+          const parsed = SignTypedDataSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { signature, approvalUrl } = await walletSigner.signTypedData(parsed.data);
+          return textResult(`Approval URL: ${approvalUrl}\nTyped data signed successfully!\nSignature: ${signature}`);
+        }
+        case "get_balance": {
+          const parsed = GetBalanceSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { balance, wei, symbol } = await walletSigner.getBalance(parsed.data);
+          return textResult(`Balance: ${balance} ${symbol}\nWei: ${wei}`);
+        }
         default:
-          return {
-            content: [{ type: "text", text: `Unknown tool: ${name}` }],
-            isError: true,
-          };
+          return errorResult(`Unknown tool: ${name}`);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return {
-        content: [{ type: "text", text: `Error: ${message}` }],
-        isError: true,
-      };
+      return errorResult(message);
     }
   });
 
   return server;
 }
 
-async function handleConnectWallet(args: unknown) {
-  const parsed = ConnectWalletSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      content: [{ type: "text", text: `Invalid arguments: ${parsed.error.message}` }],
-      isError: true,
-    };
-  }
-
-  const { chainId } = parsed.data;
-  const port = await ensureServerRunning();
-
-  const { id, promise } = pendingStore.createConnectRequest(chainId || getDefaultChainId());
-  const url = buildConnectUrl(port, id);
-
-  await openBrowser(url);
-
-  const result = await promise;
-
-  if (result.success) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Approval URL: ${url}\nWallet connected successfully!\nAddress: ${result.result}`,
-        },
-      ],
-    };
-  } else {
-    return {
-      content: [
-        { type: "text", text: `Approval URL: ${url}\nFailed to connect wallet: ${result.error}` },
-      ],
-      isError: true,
-    };
-  }
-}
-
-async function handleSendTransaction(args: unknown) {
-  const parsed = SendTransactionSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      content: [{ type: "text", text: `Invalid arguments: ${parsed.error.message}` }],
-      isError: true,
-    };
-  }
-
-  const port = await ensureServerRunning();
-
-  const { id, promise } = pendingStore.createSendTransactionRequest({
-    to: parsed.data.to,
-    value: parsed.data.value,
-    data: parsed.data.data,
-    chainId: parsed.data.chainId || getDefaultChainId(),
-    gasLimit: parsed.data.gasLimit,
-    maxFeePerGas: parsed.data.maxFeePerGas,
-    maxPriorityFeePerGas: parsed.data.maxPriorityFeePerGas,
-  });
-
-  const url = buildSignUrl(port, id);
-  await openBrowser(url);
-
-  const result = await promise;
-
-  if (result.success) {
-    const chainId = parsed.data.chainId || getDefaultChainId();
-    const chain = CHAINS[chainId];
-    const explorerUrl = chain?.blockExplorer ? `${chain.blockExplorer}/tx/${result.result}` : null;
-
-    let text = `Approval URL: ${url}\nTransaction sent successfully!\nTransaction Hash: ${result.result}`;
-    if (explorerUrl) {
-      text += `\nExplorer: ${explorerUrl}`;
-    }
-
-    return {
-      content: [{ type: "text", text }],
-    };
-  } else {
-    return {
-      content: [
-        { type: "text", text: `Approval URL: ${url}\nTransaction failed: ${result.error}` },
-      ],
-      isError: true,
-    };
-  }
-}
-
-async function handleSignMessage(args: unknown) {
-  const parsed = SignMessageSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      content: [{ type: "text", text: `Invalid arguments: ${parsed.error.message}` }],
-      isError: true,
-    };
-  }
-
-  const port = await ensureServerRunning();
-
-  const { id, promise } = pendingStore.createSignMessageRequest({
-    message: parsed.data.message,
-    address: parsed.data.address,
-    chainId: parsed.data.chainId || getDefaultChainId(),
-  });
-
-  const url = buildSignUrl(port, id);
-  await openBrowser(url);
-
-  const result = await promise;
-
-  if (result.success) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Approval URL: ${url}\nMessage signed successfully!\nSignature: ${result.result}`,
-        },
-      ],
-    };
-  } else {
-    return {
-      content: [
-        { type: "text", text: `Approval URL: ${url}\nSigning failed: ${result.error}` },
-      ],
-      isError: true,
-    };
-  }
-}
-
-async function handleSignTypedData(args: unknown) {
-  const parsed = SignTypedDataSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      content: [{ type: "text", text: `Invalid arguments: ${parsed.error.message}` }],
-      isError: true,
-    };
-  }
-
-  const port = await ensureServerRunning();
-
-  const { id, promise } = pendingStore.createSignTypedDataRequest({
-    domain: parsed.data.domain,
-    types: parsed.data.types,
-    primaryType: parsed.data.primaryType,
-    message: parsed.data.message,
-    address: parsed.data.address,
-    chainId: parsed.data.chainId || getDefaultChainId(),
-  });
-
-  const url = buildSignUrl(port, id);
-  await openBrowser(url);
-
-  const result = await promise;
-
-  if (result.success) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Approval URL: ${url}\nTyped data signed successfully!\nSignature: ${result.result}`,
-        },
-      ],
-    };
-  } else {
-    return {
-      content: [
-        { type: "text", text: `Approval URL: ${url}\nSigning failed: ${result.error}` },
-      ],
-      isError: true,
-    };
-  }
-}
-
-async function handleGetBalance(args: unknown) {
-  const parsed = GetBalanceSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      content: [{ type: "text", text: `Invalid arguments: ${parsed.error.message}` }],
-      isError: true,
-    };
-  }
-
-  const chainId = parsed.data.chainId || getDefaultChainId();
-  const rpcUrl = getRpcUrl(chainId);
-
-  if (!rpcUrl) {
-    return {
-      content: [{ type: "text", text: `Unknown chain ID: ${chainId}. No RPC URL configured.` }],
-      isError: true,
-    };
-  }
-
-  const client = createPublicClient({
-    transport: http(rpcUrl),
-  });
-
-  const balance = await client.getBalance({
-    address: parsed.data.address as `0x${string}`,
-  });
-
-  const chain = CHAINS[chainId];
-  const symbol = chain?.nativeCurrency.symbol || "ETH";
-
-  return {
-    content: [
-      {
-        type: "text",
-        text: `Balance: ${formatEther(balance)} ${symbol}\nWei: ${balance.toString()}`,
-      },
-    ],
-  };
-}
-
 /**
  * Run the MCP server with stdio transport
  */
 export async function runServer(): Promise<void> {
-  const server = createMcpServer();
+  const signer = new WalletSigner();
+  const server = createMcpServer(signer);
   const transport = new StdioServerTransport();
 
   await server.connect(transport);
