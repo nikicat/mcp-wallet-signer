@@ -14,3 +14,5 @@ export { createMcpServer, runServer } from "./mcp-server.ts";
 
 export { CHAINS, getChainConfig, getRpcUrl } from "./config.ts";
 export type { ChainConfig, TypedDataDomain, TypedDataField } from "./types.ts";
+
+export { walletSignerTransport, type WalletSignerTransportOptions } from "./transport.ts";
