@@ -1,7 +1,7 @@
 {
   "name": "mcp-wallet-signer",
   "mcpName": "io.github.nikicat/mcp-wallet-signer",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "MCP server that routes blockchain transactions to browser wallets for signing",
   "type": "module",
   "bin": {
