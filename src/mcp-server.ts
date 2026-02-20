@@ -224,7 +224,9 @@ export function createMcpServer(): Server {
               role: "user" as const,
               content: {
                 type: "text" as const,
-                text: `Send ${args?.amount ?? "?"} ETH to ${args?.address ?? "?"} on ${args?.chain ?? "Ethereum"}. Connect the wallet first if not already connected, then send the transaction.`,
+                text: `Send ${args?.amount ?? "?"} ETH to ${args?.address ?? "?"} on ${
+                  args?.chain ?? "Ethereum"
+                }. Connect the wallet first if not already connected, then send the transaction.`,
               },
             },
           ],
@@ -248,7 +250,9 @@ export function createMcpServer(): Server {
               role: "user" as const,
               content: {
                 type: "text" as const,
-                text: `Sign the following message with my wallet: ${args?.message ?? "?"}. Connect the wallet first if not already connected.`,
+                text: `Sign the following message with my wallet: ${
+                  args?.message ?? "?"
+                }. Connect the wallet first if not already connected.`,
               },
             },
           ],
