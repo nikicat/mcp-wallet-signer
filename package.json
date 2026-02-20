@@ -25,7 +25,10 @@
     "signing",
     "blockchain",
     "web3",
-    "claude"
+    "claude",
+    "non-custodial",
+    "ai-agent",
+    "transaction-signing"
   ],
   "author": "Nikolay Bryskin",
   "license": "MIT",

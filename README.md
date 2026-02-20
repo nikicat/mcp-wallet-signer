@@ -1,8 +1,21 @@
 # MCP Wallet Signer
 
+[![npm version](https://img.shields.io/npm/v/mcp-wallet-signer)](https://www.npmjs.com/package/mcp-wallet-signer)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP Badge](https://lobehub.com/badge/mcp/user-mcp-wallet-signer)](https://lobehub.com/mcp/user-mcp-wallet-signer)
 
-MCP server that routes blockchain transactions to browser wallets for signing. Install with just `claude mcp add` - no separate servers to run.
+**Your private keys never leave your browser.** Every transaction requires explicit user approval in your wallet.
+
+Most blockchain MCPs require you to paste a private key into a config file — giving the AI agent full, unsupervised access to your funds. MCP Wallet Signer takes a different approach: it routes every transaction to your actual browser wallet (MetaMask, Rabby, etc.) via [EIP-6963](https://eips.ethereum.org/EIPS/eip-6963), so you review and approve each action just like any other dapp interaction. No keys in config files, no risk of silent transactions.
+
+### Compatible With
+
+<a href="https://claude.ai/download"><img src="https://img.shields.io/badge/Claude_Desktop-available-blue" alt="Claude Desktop"></a>
+<a href="https://docs.anthropic.com/en/docs/claude-code"><img src="https://img.shields.io/badge/Claude_Code-available-blue" alt="Claude Code"></a>
+<a href="https://cursor.com"><img src="https://img.shields.io/badge/Cursor-available-blue" alt="Cursor"></a>
+<a href="https://windsurf.com"><img src="https://img.shields.io/badge/Windsurf-available-blue" alt="Windsurf"></a>
+
+Works with any MCP-compatible client via stdio transport.
 
 ## Installation
 
