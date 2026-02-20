@@ -1,5 +1,7 @@
 # MCP Wallet Signer
 
+[![MCP Badge](https://lobehub.com/badge/mcp/user-mcp-wallet-signer)](https://lobehub.com/mcp/user-mcp-wallet-signer)
+
 MCP server that routes blockchain transactions to browser wallets for signing. Install with just `claude mcp add` - no separate servers to run.
 
 ## Installation

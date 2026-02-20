@@ -1,12 +1,19 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import {
+  CallToolRequestSchema,
+  GetPromptRequestSchema,
+  ListPromptsRequestSchema,
+  ListResourcesRequestSchema,
+  ListToolsRequestSchema,
+  ReadResourceRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import { createPublicClient, formatEther, http } from "viem";
 
 import { pendingStore } from "./pending-store.ts";
 import { ensureServerRunning } from "./http-server.ts";
 import { buildConnectUrl, buildSignUrl, openBrowser } from "./browser.ts";
-import { CHAINS, getDefaultChainId, getRpcUrl } from "./config.ts";
+import { CHAINS, getDefaultChainId, getPort, getRpcUrl } from "./config.ts";
 import { ConnectWalletSchema, GetBalanceSchema, SendTransactionSchema, SignMessageSchema, SignTypedDataSchema } from "./types.ts";
 import pkg from "../package.json" with { type: "json" };
 
@@ -162,6 +169,8 @@ export function createMcpServer(): Server {
     {
       capabilities: {
         tools: {},
+        prompts: {},
+        resources: {},
       },
     },
   );
@@ -169,6 +178,153 @@ export function createMcpServer(): Server {
   // List available tools
   server.setRequestHandler(ListToolsRequestSchema, () => {
     return { tools: TOOLS };
+  });
+
+  // List available prompts
+  server.setRequestHandler(ListPromptsRequestSchema, () => {
+    return {
+      prompts: [
+        {
+          name: "send-eth",
+          description: "Send ETH to an address",
+          arguments: [
+            { name: "amount", description: "Amount of ETH to send", required: true },
+            { name: "address", description: "Recipient address (0x...)", required: true },
+            { name: "chain", description: "Chain name or ID (default: Ethereum)", required: false },
+          ],
+        },
+        {
+          name: "check-balance",
+          description: "Check the ETH balance of a wallet address",
+          arguments: [
+            { name: "address", description: "Wallet address (0x...)", required: true },
+            { name: "chain", description: "Chain name or ID (default: Ethereum)", required: false },
+          ],
+        },
+        {
+          name: "sign-message",
+          description: "Sign a message with the connected wallet",
+          arguments: [
+            { name: "message", description: "Message to sign", required: true },
+          ],
+        },
+      ],
+    };
+  });
+
+  // Get a specific prompt
+  server.setRequestHandler(GetPromptRequestSchema, (request) => {
+    const { name, arguments: args } = request.params;
+
+    switch (name) {
+      case "send-eth":
+        return {
+          messages: [
+            {
+              role: "user" as const,
+              content: {
+                type: "text" as const,
+                text: `Send ${args?.amount ?? "?"} ETH to ${args?.address ?? "?"} on ${args?.chain ?? "Ethereum"}. Connect the wallet first if not already connected, then send the transaction.`,
+              },
+            },
+          ],
+        };
+      case "check-balance":
+        return {
+          messages: [
+            {
+              role: "user" as const,
+              content: {
+                type: "text" as const,
+                text: `Check the ETH balance of ${args?.address ?? "?"} on ${args?.chain ?? "Ethereum"}.`,
+              },
+            },
+          ],
+        };
+      case "sign-message":
+        return {
+          messages: [
+            {
+              role: "user" as const,
+              content: {
+                type: "text" as const,
+                text: `Sign the following message with my wallet: ${args?.message ?? "?"}. Connect the wallet first if not already connected.`,
+              },
+            },
+          ],
+        };
+      default:
+        throw new Error(`Unknown prompt: ${name}`);
+    }
+  });
+
+  // List available resources
+  server.setRequestHandler(ListResourcesRequestSchema, () => {
+    return {
+      resources: [
+        {
+          uri: "wallet://chains",
+          name: "Supported Chains",
+          description: "List of supported blockchain networks with chain IDs, RPC URLs, and native currencies",
+          mimeType: "application/json",
+        },
+        {
+          uri: "wallet://config",
+          name: "Server Configuration",
+          description: "Current MCP wallet signer configuration (default chain, port)",
+          mimeType: "application/json",
+        },
+      ],
+    };
+  });
+
+  // Read a specific resource
+  server.setRequestHandler(ReadResourceRequestSchema, (request) => {
+    const { uri } = request.params;
+
+    switch (uri) {
+      case "wallet://chains":
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: "application/json",
+              text: JSON.stringify(
+                Object.entries(CHAINS).map(([id, chain]) => ({
+                  chainId: Number(id),
+                  name: chain.name,
+                  nativeCurrency: chain.nativeCurrency,
+                  rpcUrl: chain.rpcUrl,
+                  blockExplorer: chain.blockExplorer,
+                })),
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      case "wallet://config":
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: "application/json",
+              text: JSON.stringify(
+                {
+                  defaultChainId: getDefaultChainId(),
+                  defaultChain: CHAINS[getDefaultChainId()]?.name ?? "Unknown",
+                  port: getPort(),
+                  supportedChainIds: Object.keys(CHAINS).map(Number),
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      default:
+        throw new Error(`Unknown resource: ${uri}`);
+    }
   });
 
   // Handle tool calls
