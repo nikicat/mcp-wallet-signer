@@ -28,5 +28,8 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "viem": "^2.46.0"
   }
 }

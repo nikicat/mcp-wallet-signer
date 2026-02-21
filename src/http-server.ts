@@ -16,12 +16,12 @@ const testResults = new Map<string, { success: boolean; result?: string; error?:
 function getWebDistPath(): string {
   const scriptDir = new URL(".", import.meta.url).pathname;
 
-  // Try candidate paths in order. dnt outputs to esm/, so the package root
-  // is one level up; esbuild outputs to dist/ (also one level up); dev is web/dist.
+  // Try candidate paths in order. Dev build (web/dist) must come before web/
+  // because the web/ source directory also exists and would match statSync.
   const candidates = [
-    `${scriptDir}../web`, // dnt: esm/ → package root → web/
+    `${scriptDir}../web/dist`, // dev: src/ → web/dist (vite build output)
     `${scriptDir}../dist/web`, // esbuild: dist/ → dist/web
-    `${scriptDir}../web/dist`, // dev: src/ → web/dist
+    `${scriptDir}../web`, // dnt: esm/ → package root → web/ (contains built assets)
   ];
 
   for (const candidate of candidates) {

@@ -6,8 +6,8 @@
   },
   "imports": {
     "@modelcontextprotocol/sdk/": "npm:@modelcontextprotocol/sdk@1.0.4/",
-    "viem": "npm:viem@2.21.0",
-    "viem/": "npm:viem@2.21.0/",
+    "viem": "npm:viem@2.46.2",
+    "viem/": "npm:viem@2.46.2/",
     "zod": "npm:zod@3.23.8",
     "open": "npm:open@10.1.0",
     "@std/http": "jsr:@std/http@1.0.10",
@@ -64,5 +64,6 @@
       "tags": ["recommended"]
     }
   },
+  "nodeModulesDir": "auto",
   "exclude": ["dist/", "npm/", "web/node_modules/", "web/dist/"]
 }

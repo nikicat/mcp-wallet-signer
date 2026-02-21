@@ -1,10 +1,11 @@
-import open from "open";
-
 /**
  * Open a URL in the default browser
  */
 export async function openBrowser(url: string): Promise<void> {
   try {
+    // Dynamic import: avoids pulling in `open` (and its `is-wsl` dep) at module load time,
+    // which matters when a consumer provides a custom openBrowser and never needs this default.
+    const { default: open } = await import("open");
     await open(url);
   } catch (error) {
     // Log error but don't throw - the user might want to open the URL manually

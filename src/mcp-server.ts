@@ -11,7 +11,7 @@ import {
 
 import { WalletSigner } from "./wallet-signer.ts";
 import { CHAINS, getDefaultChainId, getPort } from "./config.ts";
-import { ConnectWalletSchema, GetBalanceSchema, SendTransactionSchema, SignMessageSchema, SignTypedDataSchema } from "./types.ts";
+import { ConnectWalletSchema, GetBalanceSchema, SendTransactionSchema, SignMessageSchema, SignTypedDataSchema } from "./schemas.ts";
 import { VERSION } from "./version.ts";
 
 // Tool definitions
