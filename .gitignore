@@ -27,3 +27,4 @@ npm-debug.log*
 # Dotfiles (tokens, credentials, local config)
 .*
 !.gitignore
+!.github/
