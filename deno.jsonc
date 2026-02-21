@@ -5,7 +5,9 @@
     "lib": ["deno.window", "ES2022"]
   },
   "imports": {
-    "@modelcontextprotocol/sdk/": "npm:@modelcontextprotocol/sdk@1.0.4/",
+    "@modelcontextprotocol/sdk/server/index.js": "npm:@modelcontextprotocol/sdk@1.0.4/dist/server/index.js",
+    "@modelcontextprotocol/sdk/server/stdio.js": "npm:@modelcontextprotocol/sdk@1.0.4/dist/server/stdio.js",
+    "@modelcontextprotocol/sdk/types.js": "npm:@modelcontextprotocol/sdk@1.0.4/dist/types.js",
     "viem": "npm:viem@2.46.2",
     "viem/": "npm:viem@2.46.2/",
     "zod": "npm:zod@3.23.8",

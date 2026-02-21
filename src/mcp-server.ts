@@ -8,6 +8,7 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolRequest, GetPromptRequest, ReadResourceRequest } from "@modelcontextprotocol/sdk/types.js";
 
 import { WalletSigner } from "./wallet-signer.ts";
 import { CHAINS, getDefaultChainId, getPort } from "./config.ts";
@@ -227,7 +228,7 @@ export function createMcpServer(signer?: WalletSigner): Server {
   });
 
   // Get a specific prompt
-  server.setRequestHandler(GetPromptRequestSchema, (request) => {
+  server.setRequestHandler(GetPromptRequestSchema, (request: GetPromptRequest) => {
     const { name, arguments: args } = request.params;
 
     switch (name) {
@@ -297,7 +298,7 @@ export function createMcpServer(signer?: WalletSigner): Server {
   });
 
   // Read a specific resource
-  server.setRequestHandler(ReadResourceRequestSchema, (request) => {
+  server.setRequestHandler(ReadResourceRequestSchema, (request: ReadResourceRequest) => {
     const { uri } = request.params;
 
     switch (uri) {
@@ -346,7 +347,7 @@ export function createMcpServer(signer?: WalletSigner): Server {
   });
 
   // Handle tool calls
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
     const { name, arguments: args } = request.params;
 
     try {
