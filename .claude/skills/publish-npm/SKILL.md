@@ -38,9 +38,12 @@ gh release create v<new-version> --title "v<new-version>" --generate-notes
 
 This triggers the `publish.yml` GitHub Actions workflow which builds and publishes to npm with provenance.
 
-### 5. Verify
+### 5. Wait for publish workflow
 
-Tell the user to check the publish status with:
-```
-gh run list --workflow=publish.yml --limit=1
-```
+Get the run ID from `gh run list --workflow=publish.yml --limit=1` and watch it with `gh run watch <run-id>`. Use a timeout of 5 minutes.
+
+If the workflow fails, show the logs with `gh run view <run-id> --log-failed` and stop.
+
+### 6. Verify package on npmjs
+
+Run `npm view mcp-wallet-signer version` and confirm the output matches `<new-version>`. If it doesn't, warn the user.
