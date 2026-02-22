@@ -67,6 +67,9 @@ await build({
     // dnt doesn't detect trailing-slash import map entries, so inject manually
     genPkg.dependencies ??= {};
     genPkg.dependencies["@modelcontextprotocol/sdk"] = "^1.0.4";
+    // viem must be a peer dependency so consumers share a single copy (avoids duplicate type errors)
+    genPkg.peerDependencies = { viem: genPkg.dependencies.viem || "^2.46.0" };
+    delete genPkg.dependencies.viem;
     // Add types conditions to exports for TypeScript consumers
     genPkg.exports = {
       ".": { import: { types: "./esm/mod.d.ts", default: "./esm/mod.js" } },
