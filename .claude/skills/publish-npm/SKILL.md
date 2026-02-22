@@ -1,14 +1,12 @@
-# /publish-npm
+---
+name: publish-npm
+description: Publish the package to npmjs by bumping version, building, and creating a GitHub release
+argument-hint: "[patch|minor|major]"
+---
 
 Publish the mcp-wallet-signer package to npmjs via GitHub release.
 
-## Usage
-
-```
-/publish-npm [patch|minor|major]
-```
-
-Defaults to `patch` if no bump type is specified.
+The argument is the semver bump type: `patch` (default), `minor`, or `major`.
 
 ## Steps
 
