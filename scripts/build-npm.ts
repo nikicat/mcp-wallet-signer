@@ -40,6 +40,7 @@ console.log("1. Building TypeScript with dnt...\n");
 await build({
   entryPoints: [
     "./src/mod.ts",
+    { name: "./wallet-only", path: "./src/wallet-only.ts" },
     { kind: "bin", name: "mcp-wallet-signer", path: "./src/index.ts" },
   ],
   outDir,
@@ -60,13 +61,17 @@ await build({
     engines: pkg.engines,
   },
   postBuild() {
-    // Add web to published files in the generated package.json
     const genPkgPath = join(outDir, "package.json");
     const genPkg = JSON.parse(Deno.readTextFileSync(genPkgPath));
     genPkg.mcpName = pkg.mcpName;
     // dnt doesn't detect trailing-slash import map entries, so inject manually
     genPkg.dependencies ??= {};
     genPkg.dependencies["@modelcontextprotocol/sdk"] = "^1.0.4";
+    // Add types conditions to exports for TypeScript consumers
+    genPkg.exports = {
+      ".": { import: { types: "./esm/mod.d.ts", default: "./esm/mod.js" } },
+      "./wallet-only": { import: { types: "./esm/wallet-only.d.ts", default: "./esm/wallet-only.js" } },
+    };
     Deno.writeTextFileSync(genPkgPath, JSON.stringify(genPkg, null, 2) + "\n");
   },
 });
