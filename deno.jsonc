@@ -3,7 +3,7 @@
   // npm package metadata (single source of truth — read by scripts/build-npm.ts)
   "npm": {
     "name": "mcp-wallet-signer",
-    "version": "0.2.7",
+    "version": "0.2.8",
     "mcpName": "io.github.nikicat/mcp-wallet-signer",
     "description": "MCP server that routes blockchain transactions to browser wallets for signing",
     "author": "Nikolay Bryskin",

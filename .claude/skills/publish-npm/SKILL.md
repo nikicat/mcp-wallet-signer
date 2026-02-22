@@ -27,7 +27,8 @@ Run `deno task build:npm` to verify the build succeeds before pushing. This runs
 
 ### 3. Commit, tag, and push
 
-1. Stage and commit `deno.jsonc` with message: `Bump version to <new-version>`
+1. Bump version in `deno.jsonc` (`npm.version`) and `server.json` (top-level `version` and `packages[0].version`).
+2. Stage and commit both files with message: `Bump version to <new-version>`
 2. Create a git tag: `v<new-version>`
 3. Push commit and tag: `git push && git push --tags`
 
