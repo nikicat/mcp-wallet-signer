@@ -57,7 +57,7 @@ export async function fetchPendingRequest(id: string): Promise<PendingRequest> {
  */
 export async function completeRequest(
   id: string,
-  result: CompleteRequest
+  result: CompleteRequest,
 ): Promise<void> {
   const response = await fetch(`/api/complete/${id}`, {
     method: "POST",

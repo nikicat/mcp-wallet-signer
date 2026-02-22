@@ -7,7 +7,7 @@
  * 3. Copies web assets into the npm output directory
  */
 
-import { build, emptyDir } from "jsr:@deno/dnt";
+import { build, emptyDir } from "jsr:@deno/dnt@0.42.3";
 import { copy } from "https://deno.land/std@0.224.0/fs/mod.ts";
 import { dirname, fromFileUrl, join } from "https://deno.land/std@0.224.0/path/mod.ts";
 

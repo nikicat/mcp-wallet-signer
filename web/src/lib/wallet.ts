@@ -1,15 +1,7 @@
 // Wallet interactions using viem and EIP-6963 wallet discovery (via mipd)
 
-import {
-  createWalletClient,
-  custom,
-  type WalletClient,
-  type Address,
-  type Hash,
-  type Hex,
-  type Chain,
-} from "viem";
-import { mainnet, sepolia, polygon, arbitrum, optimism, base, avalanche, bsc } from "viem/chains";
+import { type Address, type Chain, createWalletClient, custom, type Hash, type Hex, type WalletClient } from "viem";
+import { arbitrum, avalanche, base, bsc, mainnet, optimism, polygon, sepolia } from "viem/chains";
 import { createStore, type EIP6963ProviderDetail } from "mipd";
 
 // Chain ID to viem chain mapping
@@ -163,9 +155,7 @@ export async function switchChain(chainId: number): Promise<void> {
               chainName: chain.name,
               nativeCurrency: chain.nativeCurrency,
               rpcUrls: [chain.rpcUrls.default.http[0]],
-              blockExplorerUrls: chain.blockExplorers
-                ? [chain.blockExplorers.default.url]
-                : undefined,
+              blockExplorerUrls: chain.blockExplorers ? [chain.blockExplorers.default.url] : undefined,
             },
           ],
         });

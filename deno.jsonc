@@ -51,7 +51,7 @@
     "test:browser:ui": "cd tests/e2e-browser && deno task test:ui",
     "playwright:install": "deno run -A npm:@playwright/test@latest/cli install chromium",
     "install:all": "deno install && deno install --config web/deno.json && deno install --config tests/e2e-browser/deno.json",
-    "check": "deno check src/ tests/ scripts/",
+    "check": "deno check src/ tests/ scripts/ && deno lint src/ tests/ scripts/ && deno fmt --check src/ tests/ scripts/",
     "check:all": "deno task check && deno task --config web/deno.json check && deno task --config tests/e2e-browser/deno.json check",
     "fmt": "deno fmt src/ tests/",
     "lint": "deno lint src/ tests/",

@@ -19,13 +19,7 @@ jobs:
       - name: Install dependencies
         run: deno task install:all
 
-      - name: Lint
-        run: deno task lint
-
-      - name: Format check
-        run: deno fmt --check src/ tests/
-
-      - name: Type check
+      - name: Check (type check, lint, fmt)
         run: deno task check:all
 
       - name: Unit & e2e tests
