@@ -53,7 +53,6 @@
     "check": "deno check src/**/*.ts",
     "fmt": "deno fmt src/ tests/",
     "lint": "deno lint src/ tests/",
-    "publish:npm": "cd npm && npm publish"
   },
   "fmt": {
     "useTabs": false,

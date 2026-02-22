@@ -26,4 +26,5 @@ jobs:
         run: deno task build:npm
 
       - name: Publish to npm
+        working-directory: npm
         run: npm publish --provenance --access public
