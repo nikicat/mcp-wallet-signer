@@ -10,6 +10,7 @@
 import { build, emptyDir } from "jsr:@deno/dnt@0.42.3";
 import { copy } from "https://deno.land/std@0.224.0/fs/mod.ts";
 import { dirname, fromFileUrl, join } from "https://deno.land/std@0.224.0/path/mod.ts";
+import { parse as parseJsonc } from "jsr:@std/jsonc@1";
 
 const scriptDir = dirname(fromFileUrl(import.meta.url));
 const projectDir = join(scriptDir, "..");
@@ -30,8 +31,11 @@ async function run(cmd: string[], cwd?: string): Promise<void> {
   }
 }
 
-// Read metadata from root package.json
-const pkg = JSON.parse(await Deno.readTextFile(join(projectDir, "package.json")));
+// Read metadata from deno.jsonc (single source of truth)
+const denoJsoncRaw = await Deno.readTextFile(join(projectDir, "deno.jsonc"));
+// deno-lint-ignore no-explicit-any
+const denoConfig = parseJsonc(denoJsoncRaw) as any;
+const pkg = denoConfig.npm;
 
 await emptyDir(outDir);
 

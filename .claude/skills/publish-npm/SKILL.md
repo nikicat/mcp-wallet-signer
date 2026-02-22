@@ -12,7 +12,7 @@ The argument is an optional semver bump type: `patch`, `minor`, or `major`. If n
 
 ### 1. Analyze changes and bump version
 
-1. Read `package.json` to get the current version.
+1. Read the `npm.version` field from `deno.jsonc` to get the current version.
 2. Find the latest version tag with `git describe --tags --abbrev=0 --match 'v*'`.
 3. Run `git log <tag>..HEAD --oneline` to get the commit list since that tag.
 4. Based on the commits and diff, recommend a bump type:
@@ -27,7 +27,7 @@ Run `deno task build:npm` to verify the build succeeds before pushing. This runs
 
 ### 3. Commit, tag, and push
 
-1. Stage and commit `package.json` with message: `Bump version to <new-version>`
+1. Stage and commit `deno.jsonc` with message: `Bump version to <new-version>`
 2. Create a git tag: `v<new-version>`
 3. Push commit and tag: `git push && git push --tags`
 

@@ -1,5 +1,21 @@
 {
   "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
+  // npm package metadata (single source of truth — read by scripts/build-npm.ts)
+  "npm": {
+    "name": "mcp-wallet-signer",
+    "version": "0.2.7",
+    "mcpName": "io.github.nikicat/mcp-wallet-signer",
+    "description": "MCP server that routes blockchain transactions to browser wallets for signing",
+    "author": "Nikolay Bryskin",
+    "license": "MIT",
+    "repository": { "type": "git", "url": "https://github.com/nikicat/mcp-wallet-signer" },
+    "engines": { "node": ">=18" },
+    "keywords": [
+      "mcp", "model-context-protocol", "wallet", "ethereum", "evm", "metamask",
+      "eip-6963", "browser-wallet", "signing", "blockchain", "web3", "claude",
+      "non-custodial", "ai-agent", "transaction-signing"
+    ]
+  },
   "compilerOptions": {
     "strict": true,
     "lib": ["deno.window", "ES2022"]

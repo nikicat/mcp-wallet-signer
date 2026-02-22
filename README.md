@@ -22,7 +22,7 @@ Works with any MCP-compatible client via stdio transport.
 ### Claude Code CLI
 
 ```bash
-claude mcp add evm-wallet -- npx -y --package mcp-wallet-signer@latest mcp-wallet-signer
+claude mcp add evm-wallet -- npx -y mcp-wallet-signer
 ```
 
 ### Claude Desktop
@@ -34,7 +34,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "evm-wallet": {
       "command": "npx",
-      "args": ["-y", "--package", "mcp-wallet-signer@latest", "mcp-wallet-signer"]
+      "args": ["-y", "mcp-wallet-signer"]
     }
   }
 }
