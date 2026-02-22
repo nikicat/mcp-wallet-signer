@@ -29,12 +29,12 @@ export const SignTypedDataSchema = z.object({
     verifyingContract: z.string().optional(),
     salt: z.string().optional(),
   }).describe("EIP-712 domain"),
-  types: z.record(z.array(z.object({
+  types: z.record(z.string(), z.array(z.object({
     name: z.string(),
     type: z.string(),
   }))).describe("Type definitions"),
   primaryType: z.string().describe("Primary type name"),
-  message: z.record(z.unknown()).describe("Message data to sign"),
+  message: z.record(z.string(), z.unknown()).describe("Message data to sign"),
   address: z.string().optional().describe("Address to sign with"),
   chainId: z.number().optional().describe("Chain ID"),
 });

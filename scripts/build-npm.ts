@@ -66,7 +66,7 @@ await build({
     genPkg.mcpName = pkg.mcpName;
     // dnt doesn't detect trailing-slash import map entries, so inject manually
     genPkg.dependencies ??= {};
-    genPkg.dependencies["@modelcontextprotocol/sdk"] = "^1.0.4";
+    genPkg.dependencies["@modelcontextprotocol/sdk"] = "^1.26.0";
     // viem must be a peer dependency so consumers share a single copy (avoids duplicate type errors)
     genPkg.peerDependencies = { viem: genPkg.dependencies.viem || "^2.46.0" };
     delete genPkg.dependencies.viem;
