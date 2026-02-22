@@ -6,18 +6,20 @@ argument-hint: "[patch|minor|major]"
 
 Publish the mcp-wallet-signer package to npmjs via GitHub release.
 
-The argument is the semver bump type: `patch` (default), `minor`, or `major`.
+The argument is an optional semver bump type: `patch`, `minor`, or `major`. If not provided, recommend one based on the diff (see step 1).
 
 ## Steps
 
-### 1. Bump version in package.json
+### 1. Analyze changes and bump version
 
-Read `package.json`, bump the `version` field according to the requested semver bump type (patch/minor/major), and write it back. Use standard semver rules:
-- `patch`: 0.2.3 → 0.2.4
-- `minor`: 0.2.3 → 0.3.0
-- `major`: 0.2.3 → 1.0.0
-
-Show the user the old and new version and ask for confirmation before proceeding.
+1. Read `package.json` to get the current version.
+2. Find the latest version tag with `git describe --tags --abbrev=0 --match 'v*'`.
+3. Run `git log <tag>..HEAD --oneline` to get the commit list since that tag.
+4. Based on the commits and diff, recommend a bump type:
+   - **patch**: bug fixes, formatting, docs, dependency bumps, CI changes
+   - **minor**: new features, new API surface, new tools/commands
+   - **major**: breaking changes to public API, removed exports, changed behavior
+5. Show the user: the commit list, your recommended bump type with reasoning, and the resulting version. Ask for confirmation, offering all three bump types as options with your recommendation marked.
 
 ### 2. Build the npm package (smoke test)
 
