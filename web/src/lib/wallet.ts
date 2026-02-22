@@ -7,12 +7,13 @@ import {
   type Address,
   type Hash,
   type Hex,
+  type Chain,
 } from "viem";
 import { mainnet, sepolia, polygon, arbitrum, optimism, base, avalanche, bsc } from "viem/chains";
 import { createStore, type EIP6963ProviderDetail } from "mipd";
 
 // Chain ID to viem chain mapping
-const CHAINS: Record<number, typeof mainnet> = {
+const CHAINS: Record<number, Chain> = {
   1: mainnet,
   11155111: sepolia,
   137: polygon,
@@ -211,6 +212,7 @@ export async function sendTransaction(params: {
   }
 
   const hash = await client.sendTransaction({
+    chain: null,
     account: accounts[0],
     to: params.to,
     value: params.value,

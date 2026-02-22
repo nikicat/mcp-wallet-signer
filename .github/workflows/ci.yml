@@ -17,7 +17,7 @@ jobs:
           deno-version: v2.x
 
       - name: Install dependencies
-        run: deno install
+        run: deno task install:all
 
       - name: Lint
         run: deno task lint
@@ -26,7 +26,7 @@ jobs:
         run: deno fmt --check src/ tests/
 
       - name: Type check
-        run: deno task check
+        run: deno task check:all
 
       - name: Unit & e2e tests
         run: deno task test
