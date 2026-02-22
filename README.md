@@ -6,7 +6,10 @@
 
 **Your private keys never leave your browser.** Every transaction requires explicit user approval in your wallet.
 
-Most blockchain MCPs require you to paste a private key into a config file — giving the AI agent full, unsupervised access to your funds. MCP Wallet Signer takes a different approach: it routes every transaction to your actual browser wallet (MetaMask, Rabby, etc.) via [EIP-6963](https://eips.ethereum.org/EIPS/eip-6963), so you review and approve each action just like any other dapp interaction. No keys in config files, no risk of silent transactions.
+Most blockchain MCPs require you to paste a private key into a config file — giving the AI agent full, unsupervised access to your
+funds. MCP Wallet Signer takes a different approach: it routes every transaction to your actual browser wallet (MetaMask, Rabby,
+etc.) via [EIP-6963](https://eips.ethereum.org/EIPS/eip-6963), so you review and approve each action just like any other dapp
+interaction. No keys in config files, no risk of silent transactions.
 
 ### Compatible With
 
@@ -50,13 +53,13 @@ bunx mcp-wallet-signer
 
 ## MCP Tools
 
-| Tool | Description | Browser Required |
-|------|-------------|------------------|
-| `connect_wallet` | Connect wallet, return address | Yes |
-| `send_transaction` | Send ETH/tokens, call contracts | Yes |
-| `sign_message` | Sign arbitrary message (personal_sign) | Yes |
-| `sign_typed_data` | Sign EIP-712 typed data | Yes |
-| `get_balance` | Read ETH balance (via RPC) | No |
+| Tool               | Description                            | Browser Required |
+| ------------------ | -------------------------------------- | ---------------- |
+| `connect_wallet`   | Connect wallet, return address         | Yes              |
+| `send_transaction` | Send ETH/tokens, call contracts        | Yes              |
+| `sign_message`     | Sign arbitrary message (personal_sign) | Yes              |
+| `sign_typed_data`  | Sign EIP-712 typed data                | Yes              |
+| `get_balance`      | Read ETH balance (via RPC)             | No               |
 
 ## How It Works
 
@@ -68,6 +71,7 @@ bunx mcp-wallet-signer
 ## Supported Chains
 
 Built-in RPC URLs for:
+
 - Ethereum (1)
 - Sepolia (11155111)
 - Polygon (137)
@@ -81,10 +85,10 @@ Built-in RPC URLs for:
 
 Environment variables (optional):
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `EVM_MCP_PORT` | HTTP server port | 3847 |
-| `EVM_MCP_DEFAULT_CHAIN` | Default chain ID | 1 |
+| Variable                | Description      | Default |
+| ----------------------- | ---------------- | ------- |
+| `EVM_MCP_PORT`          | HTTP server port | 3847    |
+| `EVM_MCP_DEFAULT_CHAIN` | Default chain ID | 1       |
 
 ## Development
 
@@ -119,29 +123,52 @@ deno task lint
 
 ## Project Structure
 
+Developed with [Deno](https://deno.land/), published to npm via [dnt](https://github.com/denoland/dnt). Source in `src/` uses
+`node:` builtins (no Deno-specific APIs) so the npm bundle runs under Node.js.
+
 ```
-├── src/
-│   ├── index.ts          # Entry point
-│   ├── mcp-server.ts     # MCP tool definitions
-│   ├── http-server.ts    # Lazy-started HTTP server
-│   ├── pending-store.ts  # Promise-based request tracking
-│   ├── browser.ts        # Browser launcher
-│   ├── config.ts         # Chain/RPC configuration
-│   └── types.ts          # Type definitions
-├── web/                  # Svelte UI
-│   ├── src/
-│   │   ├── App.svelte
-│   │   ├── lib/
-│   │   │   ├── api.ts    # API client
-│   │   │   └── wallet.ts # viem wallet interactions
-│   │   └── components/
-│   │       ├── ConnectWallet.svelte
-│   │       ├── TransactionSigner.svelte
-│   │       └── MessageSigner.svelte
-│   └── ...
-└── tests/
-    ├── pending-store.test.ts
-    └── e2e/
+deno.jsonc              # Deno config + npm package metadata (single source of truth for version)
+server.json             # MCP registry manifest (read by LobeHub etc. from git)
+scripts/build-npm.ts    # dnt build: reads deno.jsonc, transforms src/ → npm/
+├── src/                # Server source (TypeScript, runs under both Deno and Node)
+│   ├── index.ts        # CLI entry point
+│   ├── mcp-server.ts   # MCP tool definitions
+│   ├── http-server.ts  # Lazy-started HTTP server for browser approval UI
+│   ├── wallet-signer.ts # Core signing orchestration
+│   ├── pending-store.ts # Promise-based request tracking
+│   ├── schemas.ts      # Zod schemas for MCP tool inputs
+│   ├── transport.ts    # viem custom transport
+│   ├── viem-account.ts # viem local account adapter
+│   ├── mod.ts          # Library export (npm: "mcp-wallet-signer")
+│   ├── wallet-only.ts  # Library export (npm: "mcp-wallet-signer/wallet-only")
+│   └── version.ts      # Reads version from package.json at runtime
+├── web/                # Svelte UI (wallet approval pages)
+│   └── src/
+│       ├── App.svelte
+│       └── components/ # ConnectWallet, TransactionSigner, MessageSigner
+├── tests/
+│   ├── *.test.ts       # Unit tests
+│   ├── e2e/            # E2E tests (HTTP API)
+│   └── e2e-browser/    # E2E tests (Playwright, real browser wallet)
+└── npm/                # Generated — dnt output + built web assets
+```
+
+### Build pipeline
+
+`deno task build:npm` runs `scripts/build-npm.ts` which:
+
+1. Transforms `src/` to ESM JavaScript via dnt → `npm/esm/`
+2. Generates `npm/package.json` from metadata in `deno.jsonc`
+3. Builds the Svelte web UI (`web/` → `web/dist/`)
+4. Copies web assets into `npm/web/`
+
+### Dev workflow
+
+```bash
+deno task dev        # Run MCP server directly with Deno
+deno task dev:web    # Vite dev server for web UI (separate terminal)
+deno task test       # Unit + E2E API tests
+deno task check      # Type check + lint + format check
 ```
 
 ## License

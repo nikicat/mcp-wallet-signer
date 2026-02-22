@@ -32,7 +32,13 @@ Run `deno task build:npm` to verify the build succeeds before pushing. This runs
 2. Create a git tag: `v<new-version>`
 3. Push commit and tag: `git push && git push --tags`
 
-### 4. Create GitHub release
+### 4. Wait for CI checks
+
+Wait for the CI workflow to pass on the pushed commit using `gh run watch $(gh run list --workflow=ci.yml --limit=1 --json databaseId --jq '.[0].databaseId')` with a timeout of 5 minutes.
+
+If CI fails, show the logs with `gh run view <run-id> --log-failed` and **stop** — do not create a release with failing checks.
+
+### 5. Create GitHub release
 
 Run:
 ```
@@ -41,12 +47,12 @@ gh release create v<new-version> --title "v<new-version>" --generate-notes
 
 This triggers the `publish.yml` GitHub Actions workflow which builds and publishes to npm with provenance.
 
-### 5. Wait for publish workflow
+### 6. Wait for publish workflow
 
 Get the run ID from `gh run list --workflow=publish.yml --limit=1` and watch it with `gh run watch <run-id>`. Use a timeout of 5 minutes.
 
 If the workflow fails, show the logs with `gh run view <run-id> --log-failed` and stop.
 
-### 6. Verify package on npmjs
+### 7. Verify package on npmjs
 
 Run `npm view mcp-wallet-signer version` and confirm the output matches `<new-version>`. If it doesn't, warn the user.
