@@ -370,7 +370,6 @@ export async function createHttpServer(
   });
 
   const actualPort = (srv.address() as AddressInfo).port;
-  console.error(`[mcp-wallet-signer] HTTP server running on http://127.0.0.1:${actualPort}`);
 
   return {
     port: actualPort,
