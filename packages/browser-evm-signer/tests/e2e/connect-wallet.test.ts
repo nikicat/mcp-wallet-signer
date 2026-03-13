@@ -186,6 +186,73 @@ Deno.test({
 });
 
 Deno.test({
+  name: "E2E - connect request with required address includes address in pending data",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const { port, stop } = await startTestServer();
+
+    try {
+      const requiredAddress = "0x1234567890abcdef1234567890abcdef12345678";
+      const { id, promise } = pendingStore.createConnectRequest({ chainId: 1, address: requiredAddress });
+
+      // Verify the address is included in the pending request via API
+      const res = await fetch(`http://127.0.0.1:${port}/api/pending/${id}`);
+      assertEquals(res.ok, true);
+
+      const data = await res.json();
+      assertEquals(data.request.type, "connect");
+      assertEquals(data.request.address, requiredAddress);
+      assertEquals(data.request.chainId, 1);
+
+      // Complete with the matching address
+      const completeRes = await fetch(`http://127.0.0.1:${port}/api/complete/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ success: true, result: requiredAddress }),
+      });
+      assertEquals(completeRes.ok, true);
+
+      const result = await promise;
+      assertEquals(result.success, true);
+      if (result.success) {
+        assertEquals(result.result, requiredAddress);
+      }
+    } finally {
+      await stop();
+    }
+  },
+});
+
+Deno.test({
+  name: "E2E - connect request without address omits address from pending data",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const { port, stop } = await startTestServer();
+
+    try {
+      const { id, promise } = pendingStore.createConnectRequest({ chainId: 1 });
+
+      const res = await fetch(`http://127.0.0.1:${port}/api/pending/${id}`);
+      assertEquals(res.ok, true);
+
+      const data = await res.json();
+      assertEquals(data.request.type, "connect");
+      assertEquals(data.request.address, undefined);
+
+      // Clean up
+      pendingStore.cancel(id);
+      try {
+        await promise;
+      } catch { /* expected */ }
+    } finally {
+      await stop();
+    }
+  },
+});
+
+Deno.test({
   name: "E2E - POST /api/complete/:id returns 400 for invalid body",
   sanitizeResources: false,
   sanitizeOps: false,
