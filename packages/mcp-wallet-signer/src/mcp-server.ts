@@ -10,8 +10,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { CallToolRequest, GetPromptRequest, ReadResourceRequest } from "@modelcontextprotocol/sdk/types.js";
 
-import { WalletSigner } from "./wallet-signer.ts";
-import { CHAINS, getDefaultChainId, getPort } from "./config.ts";
+import { CHAINS, getDefaultChainId, getPort, WalletSigner } from "browser-evm-signer";
 import {
   ConnectWalletSchema,
   GetBalanceSchema,

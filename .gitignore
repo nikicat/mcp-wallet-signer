@@ -1,11 +1,10 @@
 # Dependencies
 node_modules/
-web/node_modules/
 
 # Build output
 dist/
 npm/
-web/dist/
+packages/*/web/dist/
 
 # IDE
 .idea/

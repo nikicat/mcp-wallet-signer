@@ -1,0 +1,55 @@
+{
+  "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
+  // npm package metadata (single source of truth — read by scripts/build-npm.ts)
+  "npm": {
+    "name": "mcp-wallet-signer",
+    "version": "0.4.0",
+    "mcpName": "io.github.nikicat/mcp-wallet-signer",
+    "description": "MCP server that routes blockchain transactions to browser wallets for signing",
+    "author": "Nikolay Bryskin",
+    "license": "MIT",
+    "repository": { "type": "git", "url": "https://github.com/nikicat/mcp-wallet-signer" },
+    "engines": { "node": ">=18" },
+    "keywords": [
+      "mcp", "model-context-protocol", "wallet", "ethereum", "evm", "metamask",
+      "eip-6963", "browser-wallet", "signing", "blockchain", "web3", "claude",
+      "non-custodial", "ai-agent", "transaction-signing"
+    ]
+  },
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["deno.window", "ES2022"]
+  },
+  "imports": {
+    "browser-evm-signer": "../browser-evm-signer/src/mod.ts",
+    "@modelcontextprotocol/sdk/server/index.js": "npm:@modelcontextprotocol/sdk@1.26.0/server/index.js",
+    "@modelcontextprotocol/sdk/server/stdio.js": "npm:@modelcontextprotocol/sdk@1.26.0/server/stdio.js",
+    "@modelcontextprotocol/sdk/types.js": "npm:@modelcontextprotocol/sdk@1.26.0/types.js",
+    "viem": "npm:viem@2.46.2",
+    "viem/": "npm:viem@2.46.2/",
+    "zod": "npm:zod@4.3.6",
+    "open": "npm:open@10.1.0",
+    "@std/http": "jsr:@std/http@1.0.10",
+    "@types/node": "npm:@types/node@22.5.0"
+  },
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env --allow-read --allow-run --allow-sys src/index.ts",
+    "build:npm": "deno run -A scripts/build-npm.ts",
+    "check": "deno check src/ scripts/ && deno lint src/ scripts/ && deno fmt --check src/ scripts/",
+    "fmt": "deno fmt src/",
+    "lint": "deno lint src/"
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 130,
+    "indentWidth": 2,
+    "singleQuote": false
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "nodeModulesDir": "auto",
+  "exclude": ["npm/"]
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
+  // npm package metadata (single source of truth — read by scripts/build-npm.ts)
+  "npm": {
+    "name": "browser-evm-signer",
+    "version": "0.1.0",
+    "description": "Route EVM transactions to browser wallets for signing — standalone library, no MCP dependency",
+    "author": "Nikolay Bryskin",
+    "license": "MIT",
+    "repository": { "type": "git", "url": "https://github.com/nikicat/mcp-wallet-signer" },
+    "engines": { "node": ">=18" },
+    "keywords": [
+      "wallet", "ethereum", "evm", "metamask", "eip-6963", "browser-wallet",
+      "signing", "blockchain", "web3", "non-custodial", "transaction-signing", "viem"
+    ]
+  },
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["deno.window", "ES2022"]
+  },
+  "imports": {
+    "viem": "npm:viem@2.46.2",
+    "viem/": "npm:viem@2.46.2/",
+    "open": "npm:open@10.1.0",
+    "@std/http": "jsr:@std/http@1.0.10",
+    "@types/node": "npm:@types/node@22.5.0"
+  },
+  "permissions": {
+    "build-npm": {
+      "read": true,
+      "write": true,
+      "env": true,
+      "run": true,
+      "net": true
+    },
+    "test": {
+      "read": true,
+      "env": true,
+      "net": true,
+      "run": true,
+      "sys": true
+    },
+    "test-e2e": {
+      "read": true,
+      "env": true,
+      "net": true,
+      "run": true
+    }
+  },
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env --allow-read --allow-run --allow-sys src/mod.ts",
+    "dev:web": "cd web && deno task dev",
+    "build:web": "cd web && deno task build",
+    "build:npm": "deno run -P=build-npm scripts/build-npm.ts",
+    "test": "deno test -P=test tests/",
+    "test:e2e": "deno test -P=test-e2e tests/e2e/",
+    "test:browser": "cd tests/e2e-browser && deno task test",
+    "test:browser:ui": "cd tests/e2e-browser && deno task test:ui",
+    "playwright:install": "deno run -A npm:@playwright/test@latest/cli install chromium",
+    "install:all": "deno install && deno install --config web/deno.json && deno install --config tests/e2e-browser/deno.json",
+    "check": "deno check src/ tests/ scripts/ && deno lint src/ tests/ scripts/ && deno fmt --check src/ tests/ scripts/",
+    "fmt": "deno fmt src/ tests/",
+    "lint": "deno lint src/ tests/"
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 130,
+    "indentWidth": 2,
+    "singleQuote": false
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "nodeModulesDir": "auto",
+  "exclude": ["dist/", "npm/", "web/", "tests/e2e-browser/"]
+}

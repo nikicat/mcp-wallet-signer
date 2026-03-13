@@ -1,5 +1,5 @@
 /**
- * Build script for npm package using dnt (Deno to Node Transform).
+ * Build script for browser-evm-signer npm package using dnt (Deno to Node Transform).
  *
  * This script:
  * 1. Compiles TypeScript to JS + .d.ts via dnt
@@ -42,11 +42,7 @@ await emptyDir(outDir);
 // 1. Build TypeScript with dnt
 console.log("1. Building TypeScript with dnt...\n");
 await build({
-  entryPoints: [
-    "./src/mod.ts",
-    { name: "./wallet-only", path: "./src/wallet-only.ts" },
-    { kind: "bin", name: "mcp-wallet-signer", path: "./src/index.ts" },
-  ],
+  entryPoints: ["./src/mod.ts"],
   outDir,
   shims: {},
   scriptModule: false,
@@ -67,17 +63,13 @@ await build({
   postBuild() {
     const genPkgPath = join(outDir, "package.json");
     const genPkg = JSON.parse(Deno.readTextFileSync(genPkgPath));
-    genPkg.mcpName = pkg.mcpName;
-    // dnt doesn't detect trailing-slash import map entries, so inject manually
     genPkg.dependencies ??= {};
-    genPkg.dependencies["@modelcontextprotocol/sdk"] = "^1.26.0";
     // viem must be a peer dependency so consumers share a single copy (avoids duplicate type errors)
     genPkg.peerDependencies = { viem: genPkg.dependencies.viem || "^2.46.0" };
     delete genPkg.dependencies.viem;
     // Add types conditions to exports for TypeScript consumers
     genPkg.exports = {
       ".": { import: { types: "./esm/mod.d.ts", default: "./esm/mod.js" } },
-      "./wallet-only": { import: { types: "./esm/wallet-only.d.ts", default: "./esm/wallet-only.js" } },
     };
     Deno.writeTextFileSync(genPkgPath, JSON.stringify(genPkg, null, 2) + "\n");
   },
@@ -94,7 +86,12 @@ await copy(join(webDir, "dist"), join(outDir, "web"));
 
 // 4. Copy README for npmjs display
 console.log("\n4. Copying README...");
-await Deno.copyFile(join(projectDir, "README.md"), join(outDir, "README.md"));
+const readmePath = join(projectDir, "README.md");
+try {
+  await Deno.copyFile(readmePath, join(outDir, "README.md"));
+} catch {
+  // README may not exist yet in this package
+}
 
 console.log("\n✓ Build complete!");
 console.log(`  Output: ${outDir}`);

@@ -1,76 +1,12 @@
 {
   "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
-  // npm package metadata (single source of truth — read by scripts/build-npm.ts)
-  "npm": {
-    "name": "mcp-wallet-signer",
-    "version": "0.3.1",
-    "mcpName": "io.github.nikicat/mcp-wallet-signer",
-    "description": "MCP server that routes blockchain transactions to browser wallets for signing",
-    "author": "Nikolay Bryskin",
-    "license": "MIT",
-    "repository": { "type": "git", "url": "https://github.com/nikicat/mcp-wallet-signer" },
-    "engines": { "node": ">=18" },
-    "keywords": [
-      "mcp", "model-context-protocol", "wallet", "ethereum", "evm", "metamask",
-      "eip-6963", "browser-wallet", "signing", "blockchain", "web3", "claude",
-      "non-custodial", "ai-agent", "transaction-signing"
-    ]
-  },
-  "compilerOptions": {
-    "strict": true,
-    "lib": ["deno.window", "ES2022"]
-  },
-  "imports": {
-    "@modelcontextprotocol/sdk/server/index.js": "npm:@modelcontextprotocol/sdk@1.26.0/server/index.js",
-    "@modelcontextprotocol/sdk/server/stdio.js": "npm:@modelcontextprotocol/sdk@1.26.0/server/stdio.js",
-    "@modelcontextprotocol/sdk/types.js": "npm:@modelcontextprotocol/sdk@1.26.0/types.js",
-    "viem": "npm:viem@2.46.2",
-    "viem/": "npm:viem@2.46.2/",
-    "zod": "npm:zod@4.3.6",
-    "open": "npm:open@10.1.0",
-    "@std/http": "jsr:@std/http@1.0.10",
-    "@types/node": "npm:@types/node@22.5.0"
-  },
-  "permissions": {
-    // Build script (dnt + web UI): needs broad FS, env, network, and run
-    "build-npm": {
-      "read": true,
-      "write": true,
-      "env": true,
-      "run": true,
-      "net": true
-    },
-    "test": {
-      "read": true,
-      "env": true,
-      "net": true,
-      "run": true,
-      "sys": true
-    },
-    "test-e2e": {
-      "read": true,
-      "env": true,
-      "net": true,
-      "run": true
-    }
-  },
   "tasks": {
-    "dev": "deno run --allow-net --allow-env --allow-read --allow-run --allow-sys src/index.ts",
-    "dev:web": "cd web && deno task dev",
-    "build": "deno task build:server && deno task build:web",
-    "build:server": "deno compile --allow-net --allow-env --allow-read --allow-run --allow-sys --output dist/mcp-wallet-signer src/index.ts",
-    "build:web": "cd web && deno task build && rm -rf ../dist/web && cp -r dist ../dist/web",
-    "build:npm": "deno run -P=build-npm scripts/build-npm.ts",
-    "test": "deno test -P=test tests/",
-    "test:e2e": "deno test -P=test-e2e tests/e2e/",
-    "test:browser": "cd tests/e2e-browser && deno task test",
-    "test:browser:ui": "cd tests/e2e-browser && deno task test:ui",
-    "playwright:install": "deno run -A npm:@playwright/test@latest/cli install chromium",
-    "install:all": "deno install && deno install --config web/deno.json && deno install --config tests/e2e-browser/deno.json",
-    "check": "deno check src/ tests/ scripts/ && deno lint src/ tests/ scripts/ && deno fmt --check src/ tests/ scripts/",
-    "check:all": "deno task check && deno task --config web/deno.json check && deno task --config tests/e2e-browser/deno.json check",
-    "fmt": "deno fmt src/ tests/",
-    "lint": "deno lint src/ tests/",
+    "build:all": "cd packages/browser-evm-signer && deno task build:npm && cd ../mcp-wallet-signer && deno task build:npm",
+    "test:all": "cd packages/browser-evm-signer && deno task test",
+    "check:all": "cd packages/browser-evm-signer && deno task check && cd ../mcp-wallet-signer && deno task check",
+    "install:all": "cd packages/browser-evm-signer && deno task install:all",
+    "fmt": "cd packages/browser-evm-signer && deno task fmt && cd ../mcp-wallet-signer && deno task fmt",
+    "lint": "cd packages/browser-evm-signer && deno task lint && cd ../mcp-wallet-signer && deno task lint"
   },
   "fmt": {
     "useTabs": false,
@@ -82,7 +18,5 @@
     "rules": {
       "tags": ["recommended"]
     }
-  },
-  "nodeModulesDir": "auto",
-  "exclude": ["dist/", "npm/", "web/", "tests/e2e-browser/"]
+  }
 }
