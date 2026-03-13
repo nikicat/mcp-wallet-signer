@@ -7,7 +7,9 @@
 
 Most blockchain libraries require you to paste a private key or mnemonic into your app. `browser-evm-signer` takes a different approach: it opens your actual browser wallet (MetaMask, Rabby, etc.) for every signing action. You review and approve each transaction just like any dapp interaction.
 
-<!-- TODO: add screenshot of approval UI -->
+| Connect Wallet | Send Transaction | Sign Message |
+|:-:|:-:|:-:|
+| ![Connect Wallet](https://raw.githubusercontent.com/nikicat/mcp-wallet-signer/master/packages/browser-evm-signer/docs/screenshots/connect-wallet.png) | ![Send Transaction](https://raw.githubusercontent.com/nikicat/mcp-wallet-signer/master/packages/browser-evm-signer/docs/screenshots/send-transaction.png) | ![Sign Message](https://raw.githubusercontent.com/nikicat/mcp-wallet-signer/master/packages/browser-evm-signer/docs/screenshots/sign-message.png) |
 
 ## Why?
 

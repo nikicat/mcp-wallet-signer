@@ -68,6 +68,10 @@ bunx mcp-wallet-signer
 3. User connects wallet and approves the action
 4. Result (address, tx hash, signature) returned to agent
 
+| Connect Wallet | Send Transaction | Sign Message |
+|:-:|:-:|:-:|
+| ![Connect Wallet](https://raw.githubusercontent.com/nikicat/mcp-wallet-signer/master/packages/browser-evm-signer/docs/screenshots/connect-wallet.png) | ![Send Transaction](https://raw.githubusercontent.com/nikicat/mcp-wallet-signer/master/packages/browser-evm-signer/docs/screenshots/send-transaction.png) | ![Sign Message](https://raw.githubusercontent.com/nikicat/mcp-wallet-signer/master/packages/browser-evm-signer/docs/screenshots/sign-message.png) |
+
 ## Supported Chains
 
 Built-in RPC URLs for:
@@ -90,86 +94,54 @@ Environment variables (optional):
 | `EVM_MCP_PORT`          | HTTP server port | 3847    |
 | `EVM_MCP_DEFAULT_CHAIN` | Default chain ID | 1       |
 
+## Packages
+
+This is a monorepo with two packages:
+
+| Package | Description |
+| ------- | ----------- |
+| [`browser-evm-signer`](packages/browser-evm-signer) | Standalone library — sign EVM transactions via browser wallet, no MCP dependency |
+| [`mcp-wallet-signer`](packages/mcp-wallet-signer) | MCP server — exposes browser-evm-signer as MCP tools for AI agents |
+
+Use `browser-evm-signer` directly if you want browser-based signing in your own Node.js/Deno app without MCP.
+
 ## Development
 
 Requires [Deno](https://deno.land/) v2.0+.
 
 ```bash
-# Install dependencies
-deno install
-cd web && deno install && cd ..
+# Install all dependencies
+deno task install:all
 
-# Run MCP server in dev mode
-deno task dev
-
-# Run web UI dev server (separate terminal)
-deno task dev:web
+# Type check + lint + format check (both packages)
+deno task check:all
 
 # Run tests
-deno task test
+deno task test:all
 
-# Build web UI
-deno task build:web
-
-# Build for npm
-deno task build:npm
+# Build both npm packages
+deno task build:all
 
 # Format code
 deno task fmt
-
-# Lint code
-deno task lint
 ```
 
-## Project Structure
-
-Developed with [Deno](https://deno.land/), published to npm via [dnt](https://github.com/denoland/dnt). Source in `src/` uses
-`node:` builtins (no Deno-specific APIs) so the npm bundle runs under Node.js.
+### Project Structure
 
 ```
-deno.jsonc              # Deno config + npm package metadata (single source of truth for version)
-server.json             # MCP registry manifest (read by LobeHub etc. from git)
-scripts/build-npm.ts    # dnt build: reads deno.jsonc, transforms src/ → npm/
-├── src/                # Server source (TypeScript, runs under both Deno and Node)
-│   ├── index.ts        # CLI entry point
-│   ├── mcp-server.ts   # MCP tool definitions
-│   ├── http-server.ts  # Lazy-started HTTP server for browser approval UI
-│   ├── wallet-signer.ts # Core signing orchestration
-│   ├── pending-store.ts # Promise-based request tracking
-│   ├── schemas.ts      # Zod schemas for MCP tool inputs
-│   ├── transport.ts    # viem custom transport
-│   ├── viem-account.ts # viem local account adapter
-│   ├── mod.ts          # Library export (npm: "mcp-wallet-signer")
-│   ├── wallet-only.ts  # Library export (npm: "mcp-wallet-signer/wallet-only")
-│   └── version.ts      # Reads version from package.json at runtime
-├── web/                # Svelte UI (wallet approval pages)
-│   └── src/
-│       ├── App.svelte
-│       └── components/ # ConnectWallet, TransactionSigner, MessageSigner
-├── tests/
-│   ├── *.test.ts       # Unit tests
-│   ├── e2e/            # E2E tests (HTTP API)
-│   └── e2e-browser/    # E2E tests (Playwright, real browser wallet)
-└── npm/                # Generated — dnt output + built web assets
+packages/
+├── browser-evm-signer/     # Standalone signing library (npm: browser-evm-signer)
+│   ├── src/                 # Library source
+│   ├── web/                 # Svelte approval UI
+│   ├── tests/               # Unit, e2e, and browser tests
+│   └── scripts/build-npm.ts
+│
+└── mcp-wallet-signer/       # MCP server layer (npm: mcp-wallet-signer)
+    ├── src/                  # MCP tool definitions + CLI entry
+    └── scripts/build-npm.ts
 ```
 
-### Build pipeline
-
-`deno task build:npm` runs `scripts/build-npm.ts` which:
-
-1. Transforms `src/` to ESM JavaScript via dnt → `npm/esm/`
-2. Generates `npm/package.json` from metadata in `deno.jsonc`
-3. Builds the Svelte web UI (`web/` → `web/dist/`)
-4. Copies web assets into `npm/web/`
-
-### Dev workflow
-
-```bash
-deno task dev        # Run MCP server directly with Deno
-deno task dev:web    # Vite dev server for web UI (separate terminal)
-deno task test       # Unit + E2E API tests
-deno task check      # Type check + lint + format check
-```
+Both packages are built with [dnt](https://github.com/denoland/dnt) and use `node:` builtins (no Deno-specific APIs) so the npm bundles run under Node.js.
 
 ## License
 
