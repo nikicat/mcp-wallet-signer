@@ -10,6 +10,13 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    strategy:
+      matrix:
+        package:
+          - name: browser-evm-signer
+            dir: packages/browser-evm-signer
+          - name: mcp-wallet-signer
+            dir: packages/mcp-wallet-signer
     steps:
       - uses: actions/checkout@v4
 
@@ -22,9 +29,23 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Build npm package
+      - name: Build ${{ matrix.package.name }}
+        working-directory: ${{ matrix.package.dir }}
         run: deno task build:npm
 
-      - name: Publish to npm
-        working-directory: npm
+      - name: Check if version changed
+        id: check
+        working-directory: ${{ matrix.package.dir }}
+        run: |
+          LOCAL=$(node -p "require('./npm/package.json').version")
+          PUBLISHED=$(npm view ${{ matrix.package.name }} version 2>/dev/null || echo "0.0.0")
+          if [ "$LOCAL" = "$PUBLISHED" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish ${{ matrix.package.name }}
+        if: steps.check.outputs.skip != 'true'
+        working-directory: ${{ matrix.package.dir }}/npm
         run: npm publish --provenance --access public

@@ -23,13 +23,15 @@ jobs:
         run: deno task check:all
 
       - name: Unit & e2e tests
-        run: deno task test
+        run: deno task test:all
 
-      - name: Build web UI
-        run: deno task build:web
+      - name: Build both packages
+        run: deno task build:all
 
       - name: Install Playwright Chromium
+        working-directory: packages/browser-evm-signer
         run: deno task playwright:install
 
       - name: Browser tests
+        working-directory: packages/browser-evm-signer
         run: deno task test:browser
