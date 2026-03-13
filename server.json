@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.nikicat/mcp-wallet-signer",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "title": "EVM Wallet Signer",
   "description": "Non-custodial MCP server that routes EVM transactions to browser wallets (MetaMask, etc.) for signing. Private keys never leave the browser — every transaction requires explicit user approval via EIP-6963.",
   "websiteUrl": "https://github.com/nikicat/mcp-wallet-signer",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "mcp-wallet-signer",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "transport": {
         "type": "stdio"
       },
