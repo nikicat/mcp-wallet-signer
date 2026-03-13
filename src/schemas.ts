@@ -3,6 +3,7 @@ import { z } from "zod";
 // Zod schemas for MCP tool inputs
 export const ConnectWalletSchema = z.object({
   chainId: z.number().optional().describe("Chain ID to connect to (default: 1 for Ethereum mainnet)"),
+  address: z.string().optional().describe("Required wallet address (0x...) — if specified, the user must connect this exact address"),
 });
 
 export const SendTransactionSchema = z.object({

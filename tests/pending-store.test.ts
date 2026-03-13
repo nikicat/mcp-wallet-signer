@@ -5,7 +5,7 @@ import { assertEquals, assertExists, assertRejects } from "https://deno.land/std
 import { pendingStore } from "../src/pending-store.ts";
 
 Deno.test("PendingStore - creates connect request", async () => {
-  const { id, promise } = pendingStore.createConnectRequest(1);
+  const { id, promise } = pendingStore.createConnectRequest({ chainId: 1 });
 
   assertExists(id);
   assertEquals(typeof id, "string");
@@ -25,6 +25,26 @@ Deno.test("PendingStore - creates connect request", async () => {
   if (result.success) {
     assertEquals(result.result, "0x1234");
   }
+});
+
+Deno.test("PendingStore - creates connect request with required address", async () => {
+  const { id, promise } = pendingStore.createConnectRequest({
+    chainId: 1,
+    address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  });
+
+  const request = pendingStore.get(id);
+  assertExists(request);
+  assertEquals(request.type, "connect");
+  assertEquals(request.chainId, 1);
+  if (request.type === "connect") {
+    assertEquals(request.address, "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+  }
+
+  pendingStore.complete(id, { success: true, result: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" });
+
+  const result = await promise;
+  assertEquals(result.success, true);
 });
 
 Deno.test("PendingStore - creates send transaction request", async () => {

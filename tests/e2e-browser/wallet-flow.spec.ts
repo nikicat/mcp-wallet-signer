@@ -72,6 +72,85 @@ test.describe("Wallet Connection", () => {
 
     await ctx.close();
   });
+
+  test("connects with matching required address", async ({ browser }) => {
+    const ctx = await walletContext(browser);
+    const page = await ctx.newPage();
+
+    const { id } = await createTestRequest("connect", {
+      chainId: TEST_CHAIN_ID,
+      address: TEST_ADDRESS,
+    });
+    await page.goto(`${getBaseUrl()}/connect/${id}`);
+
+    await expect(page.getByText("Required:")).toBeVisible();
+    await expect(page.getByText(TEST_ADDRESS, { exact: false })).toBeVisible();
+
+    await page.getByRole("button", { name: "Connect" }).click();
+    await expect(page.getByText("Connected!")).toBeVisible({ timeout: 10000 });
+
+    const result = await getTestResult(id);
+    expect(result?.success).toBe(true);
+    expect(result?.result?.toLowerCase()).toBe(TEST_ADDRESS.toLowerCase());
+
+    await ctx.close();
+  });
+
+  test("shows wrong address when required address does not match", async ({ browser }) => {
+    const ctx = await walletContext(browser);
+    const page = await ctx.newPage();
+
+    const wrongAddress = "0x0000000000000000000000000000000000000001";
+    const { id } = await createTestRequest("connect", {
+      chainId: TEST_CHAIN_ID,
+      address: wrongAddress,
+    });
+    await page.goto(`${getBaseUrl()}/connect/${id}`);
+
+    await page.getByRole("button", { name: "Connect" }).click();
+    await expect(page.getByText("Wrong Address")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(wrongAddress, { exact: false })).toBeVisible();
+    await expect(page.getByText(TEST_ADDRESS, { exact: false })).toBeVisible();
+
+    // Verify the request is still pending (not completed with error)
+    const result = await getTestResult(id);
+    expect(result?.pending).toBe(true);
+
+    await ctx.close();
+  });
+
+  test("auto-completes when wallet switches to correct address", async ({ browser }) => {
+    const ctx = await walletContext(browser);
+    const page = await ctx.newPage();
+
+    const wrongAddress = "0x0000000000000000000000000000000000000001";
+    const { id } = await createTestRequest("connect", {
+      chainId: TEST_CHAIN_ID,
+      address: wrongAddress,
+    });
+    await page.goto(`${getBaseUrl()}/connect/${id}`);
+
+    await page.getByRole("button", { name: "Connect" }).click();
+    await expect(page.getByText("Wrong Address")).toBeVisible({ timeout: 10000 });
+
+    // Simulate wallet emitting accountsChanged with the correct address
+    await page.evaluate((addr) => {
+      const provider = (window as any).ethereum;
+      if (provider?._listeners?.accountsChanged) {
+        for (const cb of provider._listeners.accountsChanged) {
+          cb([addr]);
+        }
+      }
+    }, wrongAddress);
+
+    await expect(page.getByText("Connected!")).toBeVisible({ timeout: 10000 });
+
+    const result = await getTestResult(id);
+    expect(result?.success).toBe(true);
+    expect(result?.result?.toLowerCase()).toBe(wrongAddress.toLowerCase());
+
+    await ctx.close();
+  });
 });
 
 // --- Transaction Signing ---

@@ -27,11 +27,12 @@ export class PendingStore {
   /**
    * Create a new connect wallet request
    */
-  createConnectRequest(chainId?: number): { id: string; promise: Promise<RequestResult> } {
+  createConnectRequest(params?: { chainId?: number; address?: string }): { id: string; promise: Promise<RequestResult> } {
     const request: ConnectRequest = {
       id: generateId(),
       type: "connect",
-      chainId,
+      chainId: params?.chainId,
+      address: params?.address,
       createdAt: Date.now(),
     };
     return this.create(request);

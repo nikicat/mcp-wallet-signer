@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { hasWallet, getWalletName, getWalletIcon, connectWallet, getChainId, switchChain } from "../lib/wallet";
+  import { onDestroy } from "svelte";
+  import { hasWallet, getWalletName, getWalletIcon, connectWallet, getChainId, switchChain, onAccountsChanged } from "../lib/wallet";
   import { completeSuccess, completeError } from "../lib/api";
   import type { PendingRequest } from "../lib/api";
 
@@ -9,13 +10,61 @@
 
   let { request }: Props = $props();
 
-  let status: "idle" | "connecting" | "switching" | "success" | "error" = $state("idle");
+  let status: "idle" | "connecting" | "switching" | "success" | "error" | "wrong_address" = $state("idle");
   let errorMessage: string = $state("");
   let connectedAddress: string = $state("");
 
+  const expectedAddress = request.address;
   const walletAvailable = hasWallet();
   const walletName = walletAvailable ? getWalletName() : "";
   const walletIcon = walletAvailable ? getWalletIcon() : null;
+
+  let unsubAccountsChanged: (() => void) | null = null;
+
+  function addressMatch(a: string, b: string): boolean {
+    return a.toLowerCase() === b.toLowerCase();
+  }
+
+  async function finishConnect(address: string) {
+    // Switch chain if needed
+    if (request.chainId) {
+      const currentChainId = await getChainId();
+      if (currentChainId !== request.chainId) {
+        status = "switching";
+        await switchChain(request.chainId);
+      }
+    }
+
+    // Clean up listener before completing
+    if (unsubAccountsChanged) {
+      unsubAccountsChanged();
+      unsubAccountsChanged = null;
+    }
+
+    await completeSuccess(request.id, address);
+    status = "success";
+    connectedAddress = address;
+    setTimeout(() => window.close(), 1500);
+  }
+
+  function startListeningForAccountChange() {
+    if (unsubAccountsChanged) unsubAccountsChanged();
+    unsubAccountsChanged = onAccountsChanged(async (accounts) => {
+      if (!expectedAddress || accounts.length === 0) return;
+      const newAddress = accounts[0];
+      if (addressMatch(newAddress, expectedAddress)) {
+        try {
+          await finishConnect(newAddress);
+        } catch (err: unknown) {
+          errorMessage = err instanceof Error ? err.message : "Connection failed";
+          status = "error";
+          await completeError(request.id, errorMessage).catch(() => {});
+        }
+      } else {
+        connectedAddress = newAddress;
+      }
+    });
+  }
 
   async function handleConnect() {
     status = "connecting";
@@ -25,34 +74,36 @@
       const address = await connectWallet();
       connectedAddress = address;
 
-      // Check if we need to switch chains
-      if (request.chainId) {
-        const currentChainId = await getChainId();
-        if (currentChainId !== request.chainId) {
-          status = "switching";
-          await switchChain(request.chainId);
-        }
+      // Validate required address
+      if (expectedAddress && !addressMatch(address, expectedAddress)) {
+        status = "wrong_address";
+        startListeningForAccountChange();
+        return;
       }
 
-      // Report success to the server
-      await completeSuccess(request.id, address);
-      status = "success";
-
-      // Close window after brief delay
-      setTimeout(() => window.close(), 1500);
+      await finishConnect(address);
     } catch (err: unknown) {
       errorMessage = err instanceof Error ? err.message : "Connection failed";
       status = "error";
-
-      // Report error to server
       await completeError(request.id, errorMessage).catch(() => {});
     }
   }
 
   function handleCancel() {
+    if (unsubAccountsChanged) {
+      unsubAccountsChanged();
+      unsubAccountsChanged = null;
+    }
     completeError(request.id, "User cancelled").catch(() => {});
     window.close();
   }
+
+  onDestroy(() => {
+    if (unsubAccountsChanged) {
+      unsubAccountsChanged();
+      unsubAccountsChanged = null;
+    }
+  });
 </script>
 
 <div class="container">
@@ -74,6 +125,12 @@
       </div>
     {/if}
 
+    {#if expectedAddress && status !== "success" && status !== "wrong_address"}
+      <div class="required-address">
+        Required: <span class="address">{expectedAddress}</span>
+      </div>
+    {/if}
+
     {#if !walletAvailable}
       <div class="error-box">
         <p>No wallet detected</p>
@@ -84,6 +141,21 @@
         <p>Connected!</p>
         <p class="address">{connectedAddress}</p>
         <p class="small">This window will close automatically...</p>
+      </div>
+    {:else if status === "wrong_address"}
+      <div class="error-box">
+        <p>Wrong Address</p>
+        <p class="small">
+          Expected: <span class="address">{expectedAddress}</span>
+        </p>
+        <p class="small">
+          Connected: <span class="address">{connectedAddress}</span>
+        </p>
+        <p class="small">Switch to the correct account in your wallet, or click Try Again.</p>
+      </div>
+      <div class="buttons">
+        <button class="btn-secondary" onclick={handleCancel}>Cancel</button>
+        <button class="btn-primary" onclick={handleConnect}>Try Again</button>
       </div>
     {:else if status === "error"}
       <div class="error-box">
@@ -174,6 +246,17 @@
     border-radius: 20px;
     font-size: 14px;
     margin-bottom: 24px;
+  }
+
+  .required-address {
+    background: rgba(234, 179, 8, 0.1);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    color: #fbbf24;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 24px;
+    word-break: break-all;
   }
 
   .wallet-info {

@@ -34,6 +34,10 @@ const TOOLS = [
           type: "number",
           description: "Chain ID to connect to (default: 1 for Ethereum mainnet)",
         },
+        address: {
+          type: "string",
+          description: "Required wallet address (0x...) — if specified, the user must connect this exact address",
+        },
       },
     },
   },

@@ -43,7 +43,7 @@ Deno.test({
 
     try {
       // Create a pending request
-      const { id, promise } = pendingStore.createConnectRequest(1);
+      const { id, promise } = pendingStore.createConnectRequest({ chainId: 1 });
 
       // Fetch the request via API
       const res = await fetch(`http://127.0.0.1:${port}/api/pending/${id}`);
@@ -95,7 +95,7 @@ Deno.test({
 
     try {
       // Create a pending request
-      const { id, promise } = pendingStore.createConnectRequest(1);
+      const { id, promise } = pendingStore.createConnectRequest({ chainId: 1 });
 
       // Complete the request via API
       const res = await fetch(`http://127.0.0.1:${port}/api/complete/${id}`, {

@@ -169,6 +169,17 @@ export async function switchChain(chainId: number): Promise<void> {
 }
 
 /**
+ * Listen for wallet account changes.
+ * Returns an unsubscribe function.
+ */
+export function onAccountsChanged(callback: (accounts: string[]) => void): () => void {
+  const provider = getProvider();
+  if (!provider) return () => {};
+  provider.on("accountsChanged", callback);
+  return () => provider.removeListener("accountsChanged", callback);
+}
+
+/**
  * Get the current chain ID
  */
 export async function getChainId(): Promise<number> {

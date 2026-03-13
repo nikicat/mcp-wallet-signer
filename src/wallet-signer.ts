@@ -116,11 +116,11 @@ export class WalletSigner {
    * Connect to a browser wallet and get the wallet address.
    * Opens a browser window for user approval.
    */
-  async connectWallet(options?: { chainId?: number }): Promise<ConnectResult> {
+  async connectWallet(options?: { chainId?: number; address?: string }): Promise<ConnectResult> {
     const chainId = options?.chainId ?? this._defaultChainId;
     const port = await this.start();
 
-    const { id, promise } = this._pendingStore.createConnectRequest(chainId);
+    const { id, promise } = this._pendingStore.createConnectRequest({ chainId, address: options?.address });
     const approvalUrl = buildConnectUrl(port, id);
     await this._openBrowser(approvalUrl);
 

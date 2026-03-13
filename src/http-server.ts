@@ -200,7 +200,10 @@ function handleApiRequest(pathname: string, method: string, body: unknown, store
 
     switch (type) {
       case "connect": {
-        const result = store.createConnectRequest(data.chainId as number | undefined);
+        const result = store.createConnectRequest({
+          chainId: data.chainId as number | undefined,
+          address: data.address as string | undefined,
+        });
         id = result.id;
         promise = result.promise;
         break;

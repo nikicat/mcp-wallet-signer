@@ -23,6 +23,7 @@ export interface BaseRequest {
 
 export interface ConnectRequest extends BaseRequest {
   type: "connect";
+  address?: string;
 }
 
 export interface SendTransactionRequest extends BaseRequest {
