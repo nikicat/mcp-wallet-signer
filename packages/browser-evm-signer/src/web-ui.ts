@@ -1092,8 +1092,8 @@ export function getIndexHtml(): string {
             }
           },
 
-          rejectTx: function () {
-            completeError(request.id, "User rejected transaction");
+          rejectTx: async function () {
+            await completeError(request.id, "User rejected transaction");
             window.close();
           },
 
@@ -1149,8 +1149,8 @@ export function getIndexHtml(): string {
             }
           },
 
-          rejectSign: function () {
-            completeError(request.id, "User rejected signing");
+          rejectSign: async function () {
+            await completeError(request.id, "User rejected signing");
             window.close();
           },
         };
