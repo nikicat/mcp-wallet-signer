@@ -5,14 +5,14 @@ on:
     types: [created]
 
 jobs:
-  publish:
+  parse:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
+    outputs:
+      package: ${{ steps.parse.outputs.package }}
+      version: ${{ steps.parse.outputs.version }}
+      dir: ${{ steps.parse.outputs.dir }}
+      jsr: ${{ steps.parse.outputs.jsr }}
     steps:
-      - uses: actions/checkout@v4
-
       - name: Parse package from tag
         id: parse
         run: |
@@ -29,35 +29,54 @@ jobs:
           echo "dir=$DIR" >> "$GITHUB_OUTPUT"
           echo "jsr=$JSR" >> "$GITHUB_OUTPUT"
 
+  npm:
+    needs: parse
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Build ${{ steps.parse.outputs.package }}
-        working-directory: ${{ steps.parse.outputs.dir }}
+      - name: Build
+        working-directory: ${{ needs.parse.outputs.dir }}
         run: deno task build:npm
 
       - name: Verify version matches tag
-        working-directory: ${{ steps.parse.outputs.dir }}
+        working-directory: ${{ needs.parse.outputs.dir }}
         run: |
           LOCAL=$(node -p "require('./npm/package.json').version")
-          if [ "$LOCAL" != "${{ steps.parse.outputs.version }}" ]; then
-            echo "::error::Built version $LOCAL doesn't match tag version ${{ steps.parse.outputs.version }}"
+          if [ "$LOCAL" != "${{ needs.parse.outputs.version }}" ]; then
+            echo "::error::Built version $LOCAL doesn't match tag version ${{ needs.parse.outputs.version }}"
             exit 1
           fi
 
-      - name: Publish to npm
-        working-directory: ${{ steps.parse.outputs.dir }}/npm
+      - name: Publish
+        working-directory: ${{ needs.parse.outputs.dir }}/npm
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish to JSR
-        if: steps.parse.outputs.jsr == 'true'
-        working-directory: ${{ steps.parse.outputs.dir }}
+  jsr:
+    needs: parse
+    if: needs.parse.outputs.jsr == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Publish
+        working-directory: ${{ needs.parse.outputs.dir }}
         run: deno publish
