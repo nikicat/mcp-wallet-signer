@@ -1,4 +1,4 @@
-name: Publish to npm
+name: Publish package
 
 on:
   release:
@@ -10,15 +10,24 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    strategy:
-      matrix:
-        package:
-          - name: browser-evm-signer
-            dir: packages/browser-evm-signer
-          - name: mcp-wallet-signer
-            dir: packages/mcp-wallet-signer
     steps:
       - uses: actions/checkout@v4
+
+      - name: Parse package from tag
+        id: parse
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          PACKAGE="${TAG%@*}"
+          VERSION="${TAG#*@}"
+          case "$PACKAGE" in
+            mcp-wallet-signer)    DIR="packages/mcp-wallet-signer"; JSR="false" ;;
+            browser-evm-signer)   DIR="packages/browser-evm-signer"; JSR="true" ;;
+            *) echo "::error::Unknown package '$PACKAGE' in tag '$TAG'"; exit 1 ;;
+          esac
+          echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          echo "jsr=$JSR" >> "$GITHUB_OUTPUT"
 
       - uses: denoland/setup-deno@v2
         with:
@@ -29,23 +38,26 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Build ${{ matrix.package.name }}
-        working-directory: ${{ matrix.package.dir }}
+      - name: Build ${{ steps.parse.outputs.package }}
+        working-directory: ${{ steps.parse.outputs.dir }}
         run: deno task build:npm
 
-      - name: Check if version changed
-        id: check
-        working-directory: ${{ matrix.package.dir }}
+      - name: Verify version matches tag
+        working-directory: ${{ steps.parse.outputs.dir }}
         run: |
           LOCAL=$(node -p "require('./npm/package.json').version")
-          PUBLISHED=$(npm view ${{ matrix.package.name }} version 2>/dev/null || echo "0.0.0")
-          if [ "$LOCAL" = "$PUBLISHED" ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
+          if [ "$LOCAL" != "${{ steps.parse.outputs.version }}" ]; then
+            echo "::error::Built version $LOCAL doesn't match tag version ${{ steps.parse.outputs.version }}"
+            exit 1
           fi
 
-      - name: Publish ${{ matrix.package.name }}
-        if: steps.check.outputs.skip != 'true'
-        working-directory: ${{ matrix.package.dir }}/npm
+      - name: Publish to npm
+        working-directory: ${{ steps.parse.outputs.dir }}/npm
         run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to JSR
+        if: steps.parse.outputs.jsr == 'true'
+        working-directory: ${{ steps.parse.outputs.dir }}
+        run: deno publish
