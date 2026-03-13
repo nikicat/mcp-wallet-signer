@@ -83,4 +83,4 @@ jobs:
 
       - name: Publish
         working-directory: ${{ needs.parse.outputs.dir }}
-        run: deno publish
+        run: deno publish --allow-dirty
