@@ -3,13 +3,20 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 function getVersion(): string {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+  // npm bundle: package.json exists at package root
   try {
-    const dir = dirname(fileURLToPath(import.meta.url));
-    const pkg = JSON.parse(readFileSync(join(dir, "..", "package.json"), "utf-8"));
-    return pkg.version;
-  } catch {
-    return "dev";
-  }
+    return JSON.parse(readFileSync(join(root, "package.json"), "utf-8")).version;
+  } catch { /* not in npm bundle */ }
+
+  // JSR / Deno dev: read from deno.jsonc
+  try {
+    const raw = readFileSync(join(root, "deno.jsonc"), "utf-8");
+    return JSON.parse(raw.replace(/^\s*\/\/.*$/gm, "")).version;
+  } catch { /* not available */ }
+
+  return "dev";
 }
 
-export const VERSION = getVersion();
+export const VERSION: string = getVersion();

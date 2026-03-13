@@ -51,7 +51,7 @@ await build({
   importMap: "./deno.jsonc",
   package: {
     name: pkg.name,
-    version: pkg.version,
+    version: denoConfig.version,
     description: pkg.description,
     type: "module",
     license: pkg.license,

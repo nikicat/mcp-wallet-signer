@@ -197,4 +197,4 @@ export class PendingStore {
 }
 
 // Singleton instance
-export const pendingStore = new PendingStore();
+export const pendingStore: PendingStore = new PendingStore();
