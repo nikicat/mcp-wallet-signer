@@ -92,6 +92,10 @@ await run(["deno", "task", "build"], webDir);
 console.log("\n3. Copying web assets...");
 await copy(join(webDir, "dist"), join(outDir, "web"));
 
+// 4. Copy README for npmjs display
+console.log("\n4. Copying README...");
+await Deno.copyFile(join(projectDir, "README.md"), join(outDir, "README.md"));
+
 console.log("\n✓ Build complete!");
 console.log(`  Output: ${outDir}`);
 console.log("\nTo publish to npm:");
