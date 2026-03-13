@@ -18,6 +18,18 @@ const denoJsoncRaw = await Deno.readTextFile(join(projectDir, "deno.jsonc"));
 // deno-lint-ignore no-explicit-any
 const denoConfig = parseJsonc(denoJsoncRaw) as any;
 const pkg = denoConfig.npm;
+const imports: Record<string, string> = denoConfig.imports ?? {};
+
+// Extract pinned version from an import map specifier like "npm:viem@2.47.2" → "2.47.2"
+function npmVersion(key: string): string {
+  for (const [k, v] of Object.entries(imports)) {
+    if (k === key || k.startsWith(key + "/")) {
+      const m = v.match(/@(\d+\.\d+\.\d+)/);
+      if (m) return m[1];
+    }
+  }
+  throw new Error(`Cannot find npm version for "${key}" in imports`);
+}
 
 await emptyDir(outDir);
 
@@ -60,9 +72,11 @@ await build({
     genPkg.mcpName = pkg.mcpName;
     genPkg.dependencies ??= {};
     // dnt doesn't detect trailing-slash import map entries, so inject manually
-    genPkg.dependencies["@modelcontextprotocol/sdk"] = "^1.26.0";
+    const mcpVer = npmVersion("@modelcontextprotocol/sdk");
+    genPkg.dependencies["@modelcontextprotocol/sdk"] = `^${mcpVer}`;
     // viem must be a peer dependency so consumers share a single copy (avoids duplicate type errors)
-    genPkg.peerDependencies = { viem: genPkg.dependencies.viem || "^2.46.0" };
+    const viemVer = npmVersion("viem");
+    genPkg.peerDependencies = { viem: genPkg.dependencies.viem || `^${viemVer}` };
     delete genPkg.dependencies.viem;
     // Add types conditions to exports for TypeScript consumers
     genPkg.exports = {

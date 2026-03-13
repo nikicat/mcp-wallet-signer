@@ -22,11 +22,11 @@
     "lib": ["deno.window", "ES2022"]
   },
   "imports": {
-    "viem": "npm:viem@2.46.2",
-    "viem/": "npm:viem@2.46.2/",
-    "open": "npm:open@10.1.0",
-    "@std/http": "jsr:@std/http@1.0.10",
-    "@types/node": "npm:@types/node@22.5.0"
+    "viem": "npm:viem@2.47.2",
+    "viem/": "npm:viem@2.47.2/",
+    "open": "npm:open@11.0.0",
+    "@std/http": "jsr:@std/http@1.0.25",
+    "@types/node": "npm:@types/node@25.5.0"
   },
   "permissions": {
     "build-npm": {
