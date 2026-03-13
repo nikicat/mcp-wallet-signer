@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Root lock file (packages have their own tracked lock files)
+/deno.lock
+
 # Build output
 dist/
 npm/
