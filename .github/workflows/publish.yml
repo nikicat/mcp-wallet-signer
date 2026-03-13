@@ -77,6 +77,10 @@ jobs:
         with:
           deno-version: v2.x
 
+      - name: Inject version into source
+        working-directory: ${{ needs.parse.outputs.dir }}
+        run: echo 'export const VERSION = "${{ needs.parse.outputs.version }}";' > src/version.ts
+
       - name: Publish
         working-directory: ${{ needs.parse.outputs.dir }}
         run: deno publish
