@@ -1045,9 +1045,9 @@ export function getIndexHtml(): string {
             }
           },
 
-          cancelConnect: function () {
+          cancelConnect: async function () {
             cleanupAccountsListener();
-            completeError(request.id, "User cancelled");
+            await completeError(request.id, "User cancelled");
             window.close();
           },
 

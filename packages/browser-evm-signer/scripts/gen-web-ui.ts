@@ -1,5 +1,5 @@
 /**
- * Generate src/web-ui.ts from src/index.html.
+ * Generate src/web-ui.gen.ts from src/index.html.
  *
  * Reads the HTML file and wraps it in a TypeScript module that exports
  * the content as a string. This lets us author real HTML (with editor
@@ -14,7 +14,7 @@ import { dirname, fromFileUrl, join } from "https://deno.land/std@0.224.0/path/m
 const scriptDir = dirname(fromFileUrl(import.meta.url));
 const projectDir = join(scriptDir, "..");
 const htmlPath = join(projectDir, "src", "index.html");
-const outPath = join(projectDir, "src", "web-ui.ts");
+const outPath = join(projectDir, "src", "web-ui.gen.ts");
 
 const html = await Deno.readTextFile(htmlPath);
 

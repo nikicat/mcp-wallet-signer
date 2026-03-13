@@ -1,7 +1,7 @@
 /**
  * Build script for browser-evm-signer npm package using dnt (Deno to Node Transform).
  *
- * The web UI is now inline HTML (src/web-ui.ts), so no separate Svelte build is needed.
+ * The web UI is now inline HTML (src/web-ui.gen.ts), so no separate Svelte build is needed.
  */
 
 import { build, emptyDir } from "jsr:@deno/dnt@0.42.3";

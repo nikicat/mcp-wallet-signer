@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { getPort } from "./config.ts";
 import { PendingStore, pendingStore as defaultPendingStore } from "./pending-store.ts";
 import type { CompleteApiRequest, PendingApiResponse } from "./types.ts";
-import { getIndexHtml } from "./web-ui.ts";
+import { getIndexHtml } from "./web-ui.gen.ts";
 
 // Store test results for e2e browser testing
 const testResults = new Map<string, { success: boolean; result?: string; error?: string }>();

@@ -25,6 +25,30 @@ async function walletContext(
   return ctx;
 }
 
+/**
+ * Simulate real popup close: window.close() aborts all in-flight fetch requests.
+ * Without `await completeError(...)`, the POST is killed before it reaches the server.
+ *
+ * Uses route interception to add latency so the abort always wins the race
+ * (on localhost the round-trip is <1ms, which makes the race non-deterministic).
+ */
+async function patchWindowClose(page: import("@playwright/test").Page) {
+  await page.route("**/api/complete/**", async (route) => {
+    await new Promise((r) => setTimeout(r, 100));
+    try {
+      await route.continue();
+    } catch {
+      /* request was aborted by the browser */
+    }
+  });
+  await page.evaluate(() => {
+    const controller = new AbortController();
+    const origFetch = window.fetch;
+    window.fetch = (input, init?) => origFetch(input, { ...init, signal: controller.signal });
+    window.close = () => controller.abort();
+  });
+}
+
 // --- Wallet Connection ---
 
 test.describe("Wallet Connection", () => {
@@ -119,6 +143,26 @@ test.describe("Wallet Connection", () => {
     await ctx.close();
   });
 
+  test("cancels wallet connection", async ({ browser }) => {
+    const ctx = await walletContext(browser);
+    const page = await ctx.newPage();
+
+    const { id } = await createTestRequest("connect", { chainId: TEST_CHAIN_ID });
+    await page.goto(`${getBaseUrl()}/connect/${id}`);
+
+    await expect(page.getByRole("heading", { name: "Connect Wallet" })).toBeVisible();
+    await patchWindowClose(page);
+
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await page.waitForTimeout(200);
+
+    const result = await getTestResult(id);
+    expect(result?.success).toBe(false);
+    expect(result?.error).toContain("cancelled");
+
+    await ctx.close();
+  });
+
   test("auto-completes when wallet switches to correct address", async ({ browser }) => {
     const ctx = await walletContext(browser);
     const page = await ctx.newPage();
@@ -194,9 +238,10 @@ test.describe("Transaction Signing", () => {
 
     await page.goto(`${getBaseUrl()}/sign/${id}`);
     await expect(page.getByRole("heading", { name: "Send Transaction" })).toBeVisible();
+    await patchWindowClose(page);
 
     await page.getByRole("button", { name: "Reject" }).click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(200);
 
     const result = await getTestResult(id);
     expect(result?.success).toBe(false);
@@ -232,6 +277,29 @@ test.describe("Message Signing", () => {
     await ctx.close();
   });
 
+  test("rejects message signing", async ({ browser }) => {
+    const ctx = await walletContext(browser);
+    const page = await ctx.newPage();
+
+    const { id } = await createTestRequest("sign_message", {
+      message: "Hello, Ethereum!",
+      chainId: TEST_CHAIN_ID,
+    });
+
+    await page.goto(`${getBaseUrl()}/sign/${id}`);
+    await expect(page.getByRole("heading", { name: "Sign Message" })).toBeVisible();
+    await patchWindowClose(page);
+
+    await page.getByRole("button", { name: "Reject" }).click();
+    await page.waitForTimeout(200);
+
+    const result = await getTestResult(id);
+    expect(result?.success).toBe(false);
+    expect(result?.error).toContain("rejected");
+
+    await ctx.close();
+  });
+
   test("signs EIP-712 typed data", async ({ browser }) => {
     const ctx = await walletContext(browser);
     const page = await ctx.newPage();
@@ -253,6 +321,32 @@ test.describe("Message Signing", () => {
 
     const result = await getTestResult(id);
     expect(result?.success).toBe(true);
+
+    await ctx.close();
+  });
+
+  test("rejects typed data signing", async ({ browser }) => {
+    const ctx = await walletContext(browser);
+    const page = await ctx.newPage();
+
+    const { id } = await createTestRequest("sign_typed_data", {
+      domain: { name: "Test App", version: "1", chainId: TEST_CHAIN_ID },
+      types: { Message: [{ name: "content", type: "string" }] },
+      primaryType: "Message",
+      message: { content: "Hello, World!" },
+      chainId: TEST_CHAIN_ID,
+    });
+
+    await page.goto(`${getBaseUrl()}/sign/${id}`);
+    await expect(page.getByRole("heading", { name: "Sign Typed Data" })).toBeVisible();
+    await patchWindowClose(page);
+
+    await page.getByRole("button", { name: "Reject" }).click();
+    await page.waitForTimeout(200);
+
+    const result = await getTestResult(id);
+    expect(result?.success).toBe(false);
+    expect(result?.error).toContain("rejected");
 
     await ctx.close();
   });
