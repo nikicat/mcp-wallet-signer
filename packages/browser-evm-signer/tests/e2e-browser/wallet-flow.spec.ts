@@ -68,7 +68,7 @@ test.describe("Wallet Connection", () => {
     await page.goto(`${getBaseUrl()}/connect/${id}`);
 
     await expect(page.getByRole("heading", { name: "Connect Wallet" })).toBeVisible();
-    await expect(page.getByText("No wallet detected")).toBeVisible();
+    await expect(page.locator("#connect-no-wallet")).toBeVisible();
 
     await ctx.close();
   });
@@ -109,8 +109,8 @@ test.describe("Wallet Connection", () => {
 
     await page.getByRole("button", { name: "Connect" }).click();
     await expect(page.getByText("Wrong Address")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(wrongAddress, { exact: false })).toBeVisible();
-    await expect(page.getByText(TEST_ADDRESS, { exact: false })).toBeVisible();
+    await expect(page.locator("#connect-wrong-expected")).toHaveText(wrongAddress);
+    await expect(page.locator("#connect-wrong-got")).toContainText(TEST_ADDRESS);
 
     // Verify the request is still pending (not completed with error)
     const result = await getTestResult(id);

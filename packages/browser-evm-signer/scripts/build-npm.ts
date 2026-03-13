@@ -1,35 +1,16 @@
 /**
  * Build script for browser-evm-signer npm package using dnt (Deno to Node Transform).
  *
- * This script:
- * 1. Compiles TypeScript to JS + .d.ts via dnt
- * 2. Builds the Svelte web UI
- * 3. Copies web assets into the npm output directory
+ * The web UI is now inline HTML (src/web-ui.ts), so no separate Svelte build is needed.
  */
 
 import { build, emptyDir } from "jsr:@deno/dnt@0.42.3";
-import { copy } from "https://deno.land/std@0.224.0/fs/mod.ts";
 import { dirname, fromFileUrl, join } from "https://deno.land/std@0.224.0/path/mod.ts";
 import { parse as parseJsonc } from "jsr:@std/jsonc@1";
 
 const scriptDir = dirname(fromFileUrl(import.meta.url));
 const projectDir = join(scriptDir, "..");
 const outDir = join(projectDir, "npm");
-const webDir = join(projectDir, "web");
-
-async function run(cmd: string[], cwd?: string): Promise<void> {
-  console.log(`Running: ${cmd.join(" ")}`);
-  const command = new Deno.Command(cmd[0], {
-    args: cmd.slice(1),
-    cwd: cwd || projectDir,
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  const { code } = await command.output();
-  if (code !== 0) {
-    throw new Error(`Command failed with code ${code}`);
-  }
-}
 
 // Read metadata from deno.jsonc (single source of truth)
 const denoJsoncRaw = await Deno.readTextFile(join(projectDir, "deno.jsonc"));
@@ -75,17 +56,8 @@ await build({
   },
 });
 
-// 2. Build web UI
-console.log("\n2. Building web UI...");
-await run(["deno", "install"], webDir);
-await run(["deno", "task", "build"], webDir);
-
-// 3. Copy web assets into npm output
-console.log("\n3. Copying web assets...");
-await copy(join(webDir, "dist"), join(outDir, "web"));
-
-// 4. Copy README for npmjs display
-console.log("\n4. Copying README...");
+// 2. Copy README for npmjs display
+console.log("\n2. Copying README...");
 const readmePath = join(projectDir, "README.md");
 try {
   await Deno.copyFile(readmePath, join(outDir, "README.md"));

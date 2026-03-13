@@ -52,17 +52,16 @@
   },
   "tasks": {
     "dev": "deno run --allow-net --allow-env --allow-read --allow-run --allow-sys src/mod.ts",
-    "dev:web": "cd web && deno task dev",
-    "build:web": "cd web && deno task build",
+    "gen:web-ui": "deno run -A scripts/gen-web-ui.ts",
     "build:npm": "deno run -P=build-npm scripts/build-npm.ts",
     "test": "deno test -P=test tests/",
     "test:e2e": "deno test -P=test-e2e tests/e2e/",
     "test:browser": "cd tests/e2e-browser && deno task test",
     "test:browser:ui": "cd tests/e2e-browser && deno task test:ui",
     "playwright:install": "deno run -A npm:@playwright/test@latest/cli install chromium",
-    "install:all": "deno install && deno install --config web/deno.json && deno install --config tests/e2e-browser/deno.json",
-    "check": "deno check src/ tests/ scripts/ && deno lint src/ tests/ scripts/ && deno fmt --check src/ tests/ scripts/",
-    "fmt": "deno fmt src/ tests/",
+    "install:all": "deno install && deno install --config tests/e2e-browser/deno.json",
+    "check": "deno check src/ tests/ scripts/ && deno lint src/ tests/ scripts/ && deno fmt --check src/ tests/ scripts/ && deno run -A npm:htmlhint src/index.html && deno run -A scripts/gen-web-ui.ts && git diff --quiet src/web-ui.ts",
+    "fmt": "deno fmt src/ tests/ scripts/",
     "lint": "deno lint src/ tests/"
   },
   "fmt": {
@@ -77,7 +76,7 @@
     }
   },
   "nodeModulesDir": "auto",
-  "exclude": ["dist/", "npm/", "web/", "tests/e2e-browser/"],
+  "exclude": ["dist/", "npm/", "tests/e2e-browser/"],
   "publish": {
     "exclude": ["tests/", "scripts/", "docs/", "deno.lock"]
   }

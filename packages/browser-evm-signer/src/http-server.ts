@@ -1,106 +1,13 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { statSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 
 import { getPort } from "./config.ts";
 import { PendingStore, pendingStore as defaultPendingStore } from "./pending-store.ts";
 import type { CompleteApiRequest, PendingApiResponse } from "./types.ts";
+import { getIndexHtml } from "./web-ui.ts";
 
 // Store test results for e2e browser testing
 const testResults = new Map<string, { success: boolean; result?: string; error?: string }>();
-
-/**
- * Get the path to the bundled web UI
- */
-function getWebDistPath(): string {
-  const scriptDir = new URL(".", import.meta.url).pathname;
-
-  // Try candidate paths in order. Dev build (web/dist) must come before web/
-  // because the web/ source directory also exists and would match statSync.
-  const candidates = [
-    `${scriptDir}../web/dist`, // dev: src/ → web/dist (vite build output)
-    `${scriptDir}../dist/web`, // esbuild: dist/ → dist/web
-    `${scriptDir}../web`, // dnt: esm/ → package root → web/ (contains built assets)
-  ];
-
-  for (const candidate of candidates) {
-    try {
-      statSync(candidate);
-      return candidate;
-    } catch {
-      // try next
-    }
-  }
-
-  // Fallback — will fail later with a clear error from serveStaticFile
-  return candidates[0];
-}
-
-/**
- * Serve static files from the web dist directory
- */
-async function serveStaticFile(path: string, webDistPath: string): Promise<Response> {
-  // Default to index.html for SPA routing
-  let filePath = path === "/" || path === "" ? "/index.html" : path;
-
-  // Remove leading slash and sanitize
-  filePath = filePath.replace(/^\/+/, "").replace(/\.\./g, "");
-
-  const fullPath = `${webDistPath}/${filePath}`;
-
-  try {
-    const file = new Uint8Array(await readFile(fullPath));
-    const contentType = getContentType(filePath);
-    return new Response(file, {
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "no-cache",
-      },
-    });
-  } catch {
-    // For SPA, serve index.html for any unknown path
-    if (!filePath.includes(".")) {
-      try {
-        const indexHtml = new Uint8Array(await readFile(`${webDistPath}/index.html`));
-        return new Response(indexHtml, {
-          headers: {
-            "Content-Type": "text/html",
-            "Cache-Control": "no-cache",
-          },
-        });
-      } catch {
-        return new Response("Web UI not found. Run 'deno task build:web' first.", {
-          status: 404,
-        });
-      }
-    }
-    return new Response("Not found", { status: 404 });
-  }
-}
-
-/**
- * Get content type from file extension
- */
-function getContentType(path: string): string {
-  const ext = path.split(".").pop()?.toLowerCase();
-  const types: Record<string, string> = {
-    html: "text/html",
-    js: "application/javascript",
-    mjs: "application/javascript",
-    css: "text/css",
-    json: "application/json",
-    png: "image/png",
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    svg: "image/svg+xml",
-    ico: "image/x-icon",
-    woff: "font/woff",
-    woff2: "font/woff2",
-    ttf: "font/ttf",
-  };
-  return types[ext || ""] || "application/octet-stream";
-}
 
 /**
  * Handle API requests
@@ -321,9 +228,21 @@ async function writeResponse(res: ServerResponse, response: Response): Promise<v
 }
 
 /**
+ * Serve the inline HTML page for any non-API GET request (SPA routing).
+ */
+function serveHtml(): Response {
+  return new Response(getIndexHtml(), {
+    headers: {
+      "Content-Type": "text/html",
+      "Cache-Control": "no-cache",
+    },
+  });
+}
+
+/**
  * Create a node:http request handler using the existing Response-based logic.
  */
-function makeHandler(webDistPath: string, store: PendingStore) {
+function makeHandler(store: PendingStore) {
   return async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url!, `http://${req.headers.host || "127.0.0.1"}`);
     const pathname = url.pathname;
@@ -348,7 +267,7 @@ function makeHandler(webDistPath: string, store: PendingStore) {
       }
       response = handleApiRequest(pathname, method, body, store);
     } else {
-      response = await serveStaticFile(pathname, webDistPath);
+      response = serveHtml();
     }
 
     await writeResponse(res, response);
@@ -364,9 +283,8 @@ export async function createHttpServer(
   port?: number,
 ): Promise<{ port: number; stop: () => Promise<void> }> {
   const targetPort = port ?? getPort();
-  const webDistPath = getWebDistPath();
 
-  const srv = createServer(makeHandler(webDistPath, store));
+  const srv = createServer(makeHandler(store));
 
   await new Promise<void>((resolve) => {
     srv.listen(targetPort, "127.0.0.1", () => resolve());
