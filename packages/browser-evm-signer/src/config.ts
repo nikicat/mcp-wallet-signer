@@ -4,7 +4,7 @@ import type { ChainConfig } from "./types.ts";
 // Default HTTP server port
 export const DEFAULT_PORT = 3847;
 
-// Get port from environment or use default
+/** Get the HTTP server port from `EVM_MCP_PORT` env var, falling back to {@linkcode DEFAULT_PORT}. */
 export function getPort(): number {
   const envPort = process.env.EVM_MCP_PORT;
   if (envPort) {
@@ -16,7 +16,7 @@ export function getPort(): number {
   return DEFAULT_PORT;
 }
 
-// Get default chain ID from environment or use mainnet
+/** Get the default chain ID from `EVM_MCP_DEFAULT_CHAIN` env var, falling back to Ethereum mainnet (1). */
 export function getDefaultChainId(): number {
   const envChain = process.env.EVM_MCP_DEFAULT_CHAIN;
   if (envChain) {
@@ -28,7 +28,7 @@ export function getDefaultChainId(): number {
   return 1; // Ethereum mainnet
 }
 
-// Built-in chain configurations
+/** Built-in chain configurations keyed by chain ID (Ethereum, Polygon, Arbitrum, etc.). */
 export const CHAINS: Record<number, ChainConfig> = {
   // Ethereum Mainnet
   1: {
@@ -96,12 +96,12 @@ export const CHAINS: Record<number, ChainConfig> = {
   },
 };
 
-// Get chain config by ID, with fallback for unknown chains
+/** Look up a {@linkcode ChainConfig} by chain ID, returning `undefined` for unknown chains. */
 export function getChainConfig(chainId: number): ChainConfig | undefined {
   return CHAINS[chainId];
 }
 
-// Get RPC URL for a chain
+/** Get the JSON-RPC endpoint URL for a chain, or `undefined` if the chain is not in {@linkcode CHAINS}. */
 export function getRpcUrl(chainId: number): string | undefined {
   return CHAINS[chainId]?.rpcUrl;
 }

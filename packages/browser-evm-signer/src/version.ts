@@ -22,4 +22,5 @@ function getVersion(): string {
   return "dev";
 }
 
+/** The package version string, read from package.json or deno.jsonc at runtime. */
 export const VERSION: string = getVersion();

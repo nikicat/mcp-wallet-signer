@@ -6,6 +6,7 @@ import { buildConnectUrl, buildSignUrl, openBrowser } from "./browser.ts";
 import { CHAINS, getDefaultChainId, getPort, getRpcUrl } from "./config.ts";
 import type { TypedDataDomain, TypedDataField } from "./types.ts";
 
+/** Options for constructing a {@linkcode WalletSigner}. */
 export interface WalletSignerOptions {
   port?: number;
   defaultChainId?: number;
@@ -13,6 +14,7 @@ export interface WalletSignerOptions {
   openBrowser?: boolean | ((url: string) => void | Promise<void>);
 }
 
+/** Parameters for {@linkcode WalletSigner.sendTransaction}. */
 export interface SendTransactionParams {
   to: string;
   value?: string;
@@ -23,12 +25,14 @@ export interface SendTransactionParams {
   maxPriorityFeePerGas?: string;
 }
 
+/** Parameters for {@linkcode WalletSigner.signMessage}. */
 export interface SignMessageParams {
   message: string;
   address?: string;
   chainId?: number;
 }
 
+/** Parameters for {@linkcode WalletSigner.signTypedData}. */
 export interface SignTypedDataParams {
   domain: TypedDataDomain;
   types: Record<string, TypedDataField[]>;
@@ -38,21 +42,25 @@ export interface SignTypedDataParams {
   chainId?: number;
 }
 
+/** Result of {@linkcode WalletSigner.connectWallet}: the connected address and the approval URL. */
 export interface ConnectResult {
   address: string;
   approvalUrl: string;
 }
 
+/** Result of {@linkcode WalletSigner.sendTransaction}: the transaction hash and the approval URL. */
 export interface TransactionResult {
   txHash: string;
   approvalUrl: string;
 }
 
+/** Result of {@linkcode WalletSigner.signMessage} or {@linkcode WalletSigner.signTypedData}. */
 export interface SignResult {
   signature: string;
   approvalUrl: string;
 }
 
+/** Result of {@linkcode WalletSigner.getBalance}: native token balance in both human-readable and wei formats. */
 export interface BalanceResult {
   balance: string;
   wei: string;

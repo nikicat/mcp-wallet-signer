@@ -12,6 +12,7 @@ export interface ViemBrowserAccount {
   signTransaction: never;
 }
 
+/** Options for {@linkcode connectWalletViem}. */
 export interface ConnectWalletViemOptions extends WalletSignerTransportOptions {
   /** Pre-connected address — skips the connectWallet() browser prompt if provided. */
   address?: Address;

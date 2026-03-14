@@ -4,6 +4,7 @@ import type { CustomTransport } from "viem";
 import type { SendTransactionParams, WalletSigner } from "./wallet-signer.ts";
 import { getRpcUrl } from "./config.ts";
 
+/** Options for {@linkcode walletSignerTransport}. */
 export interface WalletSignerTransportOptions {
   /** JSON-RPC endpoint for chain-reading calls. Defaults to built-in RPC for the signer's default chain. */
   rpcUrl?: string;

@@ -1,4 +1,4 @@
-// Chain configuration
+/** Configuration for a supported EVM chain (name, RPC URL, native currency, etc.). */
 export interface ChainConfig {
   id: number;
   name: string;
@@ -51,6 +51,7 @@ export interface SignTypedDataRequest extends BaseRequest {
   address?: string;
 }
 
+/** EIP-712 domain separator fields. */
 export interface TypedDataDomain {
   name?: string;
   version?: string;
@@ -59,6 +60,7 @@ export interface TypedDataDomain {
   salt?: string;
 }
 
+/** A single field in an EIP-712 type definition. */
 export interface TypedDataField {
   name: string;
   type: string;

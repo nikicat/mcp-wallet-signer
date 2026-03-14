@@ -196,5 +196,5 @@ export class PendingStore {
   }
 }
 
-// Singleton instance
+/** Default singleton {@linkcode PendingStore} instance. */
 export const pendingStore: PendingStore = new PendingStore();
