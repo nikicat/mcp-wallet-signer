@@ -1085,6 +1085,8 @@ export function getIndexHtml(): string {
                 window.close();
               }, 2000);
             } catch (err) {
+              console.error("[browser-evm-signer] transaction error:", err);
+              if (err && err.code !== undefined) console.error("[browser-evm-signer] code:", err.code, "data:", err.data);
               viewError = err instanceof Error ? err.message : "Transaction failed";
               viewStatus = "error";
               render();
@@ -1142,6 +1144,8 @@ export function getIndexHtml(): string {
                 window.close();
               }, 2000);
             } catch (err) {
+              console.error("[browser-evm-signer] signing error:", err);
+              if (err && err.code !== undefined) console.error("[browser-evm-signer] code:", err.code, "data:", err.data);
               viewError = err instanceof Error ? err.message : "Signing failed";
               viewStatus = "error";
               render();
