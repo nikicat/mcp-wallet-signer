@@ -51,6 +51,10 @@ pnpx mcp-wallet-signer
 bunx mcp-wallet-signer
 ```
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/nikicat-mcp-wallet-signer).
+
 ## MCP Tools
 
 | Tool               | Description                            | Browser Required |
