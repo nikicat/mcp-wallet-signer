@@ -107,8 +107,8 @@ test.describe("Wallet Connection", () => {
     });
     await page.goto(`${getBaseUrl()}/connect/${id}`);
 
-    await expect(page.getByText("Required:")).toBeVisible();
-    await expect(page.getByText(TEST_ADDRESS, { exact: false })).toBeVisible();
+    await expect(page.locator("#connect-required")).toBeVisible();
+    await expect(page.locator("#connect-required-text")).toContainText(TEST_ADDRESS);
 
     await page.getByRole("button", { name: "Connect" }).click();
     await expect(page.getByText("Connected!")).toBeVisible({ timeout: 10000 });
@@ -132,7 +132,7 @@ test.describe("Wallet Connection", () => {
     await page.goto(`${getBaseUrl()}/connect/${id}`);
 
     await page.getByRole("button", { name: "Connect" }).click();
-    await expect(page.getByText("Wrong Address")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("#connect-wrong")).toBeVisible({ timeout: 10000 });
     await expect(page.locator("#connect-wrong-expected")).toHaveText(wrongAddress);
     await expect(page.locator("#connect-wrong-got")).toContainText(TEST_ADDRESS);
 
@@ -175,7 +175,7 @@ test.describe("Wallet Connection", () => {
     await page.goto(`${getBaseUrl()}/connect/${id}`);
 
     await page.getByRole("button", { name: "Connect" }).click();
-    await expect(page.getByText("Wrong Address")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("#connect-wrong")).toBeVisible({ timeout: 10000 });
 
     // Simulate wallet emitting accountsChanged with the correct address
     await page.evaluate((addr) => {
