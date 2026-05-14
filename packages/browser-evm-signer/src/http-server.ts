@@ -66,7 +66,7 @@ function handleApiRequest(pathname: string, method: string, body: unknown, store
 
     const result = data.success
       ? { success: true as const, result: data.result || "" }
-      : { success: false as const, error: data.error || "Unknown error" };
+      : { success: false as const, error: data.error || "Unknown error", code: data.code };
 
     const completed = store.complete(id, result);
 

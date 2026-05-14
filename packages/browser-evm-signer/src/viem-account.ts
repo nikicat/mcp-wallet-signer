@@ -38,14 +38,17 @@ export async function connectWalletViem(
     } else {
       msg = typeof message.raw === "string" ? message.raw : new TextDecoder().decode(message.raw);
     }
-    const { signature } = await signer.signMessage({ message: msg });
+    const { signature } = await signer.signMessage({ message: msg, address });
     return signature as Hex;
   };
 
   // viem's CustomSource["signTypedData"] uses heavily generic conditional types (TypedDataDefinition)
   // that TypeScript can't prove assignable to any concrete type inside the generic callback.
   const signTypedData: CustomSource["signTypedData"] = async (params) => {
-    const { signature } = await signer.signTypedData(params as unknown as SignTypedDataParams);
+    const { signature } = await signer.signTypedData({
+      ...(params as unknown as SignTypedDataParams),
+      address,
+    });
     return signature as Hex;
   };
 

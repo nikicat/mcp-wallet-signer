@@ -4,7 +4,8 @@ import { PendingStore } from "./pending-store.ts";
 import { createHttpServer } from "./http-server.ts";
 import { buildConnectUrl, buildSignUrl, openBrowser } from "./browser.ts";
 import { CHAINS, getDefaultChainId, getPort, getRpcUrl } from "./config.ts";
-import type { TypedDataDomain, TypedDataField } from "./types.ts";
+import { SignerErrorCode, WrongWalletAddressError } from "./errors.ts";
+import type { RequestResult, TypedDataDomain, TypedDataField } from "./types.ts";
 
 /** Options for constructing a {@linkcode WalletSigner}. */
 export interface WalletSignerOptions {
@@ -17,6 +18,8 @@ export interface WalletSignerOptions {
 /** Parameters for {@linkcode WalletSigner.sendTransaction}. */
 export interface SendTransactionParams {
   to: string;
+  /** Expected `from` address. When set, the browser UI refuses to sign unless the connected wallet matches. */
+  from?: string;
   value?: string;
   data?: string;
   chainId?: number;
@@ -98,6 +101,13 @@ export class WalletSigner {
     return this._pendingStore;
   }
 
+  /** Unwrap a pending-store result, mapping discriminating error codes to typed exceptions. */
+  private _unwrap(result: RequestResult): string {
+    if (result.success) return result.result;
+    if (result.code === SignerErrorCode.WrongWalletAddress) throw new WrongWalletAddressError(result.error);
+    throw new Error(result.error);
+  }
+
   /** The configured default chain ID */
   get defaultChainId(): number {
     return this._defaultChainId;
@@ -132,9 +142,7 @@ export class WalletSigner {
     const approvalUrl = buildConnectUrl(port, id);
     await this._openBrowser(approvalUrl);
 
-    const result = await promise;
-    if (!result.success) throw new Error(result.error);
-    return { address: result.result, approvalUrl };
+    return { address: this._unwrap(await promise), approvalUrl };
   }
 
   /**
@@ -152,9 +160,7 @@ export class WalletSigner {
     const approvalUrl = buildSignUrl(port, id);
     await this._openBrowser(approvalUrl);
 
-    const result = await promise;
-    if (!result.success) throw new Error(result.error);
-    return { txHash: result.result, approvalUrl };
+    return { txHash: this._unwrap(await promise), approvalUrl };
   }
 
   /**
@@ -172,9 +178,7 @@ export class WalletSigner {
     const approvalUrl = buildSignUrl(port, id);
     await this._openBrowser(approvalUrl);
 
-    const result = await promise;
-    if (!result.success) throw new Error(result.error);
-    return { signature: result.result, approvalUrl };
+    return { signature: this._unwrap(await promise), approvalUrl };
   }
 
   /**
@@ -192,9 +196,7 @@ export class WalletSigner {
     const approvalUrl = buildSignUrl(port, id);
     await this._openBrowser(approvalUrl);
 
-    const result = await promise;
-    if (!result.success) throw new Error(result.error);
-    return { signature: result.result, approvalUrl };
+    return { signature: this._unwrap(await promise), approvalUrl };
   }
 
   /**

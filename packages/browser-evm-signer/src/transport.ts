@@ -19,15 +19,16 @@ export function walletSignerTransport(
     async request({ method, params }) {
       switch (method) {
         case "personal_sign": {
-          const [messageHex] = params as [string, string];
+          const [messageHex, address] = params as [string, string];
           const message = hexToString(messageHex as `0x${string}`);
-          const { signature } = await signer.signMessage({ message });
+          const { signature } = await signer.signMessage({ message, address });
           return signature;
         }
 
         case "eth_sendTransaction": {
           const [tx] = params as [Record<string, string>];
           const sendParams: SendTransactionParams = { to: tx.to };
+          if (tx.from) sendParams.from = tx.from;
           if (tx.data) sendParams.data = tx.data;
           if (tx.value) sendParams.value = BigInt(tx.value).toString();
           if (tx.gas) sendParams.gasLimit = BigInt(tx.gas).toString();
@@ -41,9 +42,9 @@ export function walletSignerTransport(
         }
 
         case "eth_signTypedData_v4": {
-          const [, typedDataJson] = params as [string, string];
+          const [address, typedDataJson] = params as [string, string];
           const { domain, types, primaryType, message } = JSON.parse(typedDataJson);
-          const { signature } = await signer.signTypedData({ domain, types, primaryType, message });
+          const { signature } = await signer.signTypedData({ domain, types, primaryType, message, address });
           return signature;
         }
 

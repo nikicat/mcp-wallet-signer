@@ -13,6 +13,8 @@ export {
 export { CHAINS, getChainConfig, getDefaultChainId, getPort, getRpcUrl } from "./config.ts";
 export type { ChainConfig, TypedDataDomain, TypedDataField } from "./types.ts";
 
+export { findWrongWalletAddressError, SignerErrorCode, WrongWalletAddressError } from "./errors.ts";
+
 export { walletSignerTransport, type WalletSignerTransportOptions } from "./transport.ts";
 export { connectWalletViem, type ConnectWalletViemOptions, type ViemBrowserAccount } from "./viem-account.ts";
 

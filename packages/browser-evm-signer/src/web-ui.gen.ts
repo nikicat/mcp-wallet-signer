@@ -454,11 +454,28 @@ export function getIndexHtml(): string {
           </div>
           <h1>Send Transaction</h1>
 
+          <div id="tx-required" class="required-address hidden">
+            Required: <span id="tx-required-text" class="address"></span>
+          </div>
+
           <!-- success -->
           <div id="tx-success" class="success-box hidden">
             <p>Transaction Sent!</p>
             <p id="tx-hash" class="hash"></p>
             <p class="small">This window will close automatically...</p>
+          </div>
+
+          <!-- wrong address -->
+          <div id="tx-wrong" class="hidden">
+            <div class="error-box">
+              <p>Wrong Address</p>
+              <p class="small">Expected: <span id="tx-wrong-expected" class="address"></span></p>
+              <p class="small">Connected: <span id="tx-wrong-got" class="address"></span></p>
+              <p class="small">Switch to the correct account in your wallet to continue.</p>
+            </div>
+            <div class="buttons">
+              <button class="btn-secondary" onclick="app.rejectTx()">Reject</button>
+            </div>
           </div>
 
           <!-- error -->
@@ -520,11 +537,28 @@ export function getIndexHtml(): string {
           </div>
           <h1 id="msg-heading">Sign Message</h1>
 
+          <div id="msg-required" class="required-address hidden">
+            Required: <span id="msg-required-text" class="address"></span>
+          </div>
+
           <!-- success -->
           <div id="msg-success" class="success-box hidden">
             <p>Signed Successfully!</p>
             <p id="msg-sig" class="signature"></p>
             <p class="small">This window will close automatically...</p>
+          </div>
+
+          <!-- wrong address -->
+          <div id="msg-wrong" class="hidden">
+            <div class="error-box">
+              <p>Wrong Address</p>
+              <p class="small">Expected: <span id="msg-wrong-expected" class="address"></span></p>
+              <p class="small">Connected: <span id="msg-wrong-got" class="address"></span></p>
+              <p class="small">Switch to the correct account in your wallet to continue.</p>
+            </div>
+            <div class="buttons">
+              <button class="btn-secondary" onclick="app.rejectSign()">Reject</button>
+            </div>
           </div>
 
           <!-- error -->
@@ -790,13 +824,16 @@ export function getIndexHtml(): string {
           }
         }
 
-        async function completeError(id, error) {
+        async function completeError(id, error, code) {
           await fetch("/api/complete/" + id, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ success: false, error: error }),
+            body: JSON.stringify({ success: false, error: error, code: code }),
           }).catch(function () {});
         }
+
+        // Keep in sync with \`SignerErrorCode\` in src/errors.ts.
+        var ERROR_CODE_WRONG_WALLET_ADDRESS = "WRONG_WALLET_ADDRESS";
 
         // --- App State ---
         var request = null;
@@ -862,14 +899,26 @@ export function getIndexHtml(): string {
 
         function renderTx() {
           hide($("tx-success"));
+          hide($("tx-wrong"));
           hide($("tx-err"));
           hide($("tx-details"));
           hide($("tx-no-wallet"));
           hide($("tx-footer"));
 
+          // Required address (shown unless success or wrong_address)
+          if (request.from && viewStatus !== "success" && viewStatus !== "wrong_address") {
+            $("tx-required-text").textContent = request.from;
+            show($("tx-required"));
+          } else hide($("tx-required"));
+
           if (viewStatus === "success") {
             $("tx-hash").textContent = txHash;
             show($("tx-success"));
+          } else if (viewStatus === "wrong_address") {
+            $("tx-wrong-expected").textContent = request.from;
+            $("tx-wrong-got").textContent = connectedAddress;
+            show($("tx-wrong"));
+            return;
           } else if (viewStatus === "error") {
             $("tx-err-msg").textContent = viewError;
             show($("tx-err"));
@@ -915,15 +964,27 @@ export function getIndexHtml(): string {
           $("msg-heading").textContent = isTypedData ? "Sign Typed Data" : "Sign Message";
 
           hide($("msg-success"));
+          hide($("msg-wrong"));
           hide($("msg-err"));
           hide($("msg-content"));
           hide($("msg-chain"));
           hide($("msg-no-wallet"));
           hide($("msg-footer"));
 
+          // Required address (shown unless success or wrong_address)
+          if (request.address && viewStatus !== "success" && viewStatus !== "wrong_address") {
+            $("msg-required-text").textContent = request.address;
+            show($("msg-required"));
+          } else hide($("msg-required"));
+
           if (viewStatus === "success") {
             $("msg-sig").textContent = signature;
             show($("msg-success"));
+          } else if (viewStatus === "wrong_address") {
+            $("msg-wrong-expected").textContent = request.address;
+            $("msg-wrong-got").textContent = connectedAddress;
+            show($("msg-wrong"));
+            return;
           } else if (viewStatus === "error") {
             $("msg-err-msg").textContent = viewError;
             show($("msg-err"));
@@ -1000,12 +1061,36 @@ export function getIndexHtml(): string {
           }
         }
 
+        function expectedAddress() {
+          return request.type === "send_transaction" ? request.from : request.address;
+        }
+
+        function wrongAddressMessage() {
+          return "Wrong wallet address: expected " + expectedAddress() + ", got " + connectedAddress;
+        }
+
+        async function rejectWith(defaultReason) {
+          if (viewStatus === "wrong_address") {
+            await completeError(request.id, wrongAddressMessage(), ERROR_CODE_WRONG_WALLET_ADDRESS);
+          } else {
+            await completeError(request.id, defaultReason);
+          }
+        }
+
         function startListeningForAccountChange() {
           cleanupAccountsListener();
+          var expected = expectedAddress();
+          if (!expected) return;
           unsubAccountsChanged = onAccountsChanged(async function (accounts) {
-            if (!request.address || accounts.length === 0) return;
+            if (accounts.length === 0) return;
             var newAddr = accounts[0];
-            if (addressMatch(newAddr, request.address)) {
+            connectedAddress = newAddr;
+            if (!addressMatch(newAddr, expected)) {
+              render();
+              return;
+            }
+            cleanupAccountsListener();
+            if (request.type === "connect") {
               try {
                 await finishConnect(newAddr);
               } catch (err) {
@@ -1014,9 +1099,10 @@ export function getIndexHtml(): string {
                 render();
                 completeError(request.id, viewError);
               }
+            } else if (request.type === "send_transaction") {
+              await app.handleSignTx();
             } else {
-              connectedAddress = newAddr;
-              render();
+              await app.handleSignMsg();
             }
           });
         }
@@ -1047,7 +1133,7 @@ export function getIndexHtml(): string {
 
           cancelConnect: async function () {
             cleanupAccountsListener();
-            await completeError(request.id, "User cancelled");
+            await rejectWith("User cancelled");
             window.close();
           },
 
@@ -1060,6 +1146,13 @@ export function getIndexHtml(): string {
               if (accounts.length > 0) connectedAddress = accounts[0];
               else connectedAddress = (await requestAccounts())[0];
 
+              if (request.from && !addressMatch(connectedAddress, request.from)) {
+                viewStatus = "wrong_address";
+                render();
+                startListeningForAccountChange();
+                return;
+              }
+
               if (request.chainId) {
                 var currentChainId = await getChainId();
                 if (currentChainId !== request.chainId) await switchChain(request.chainId);
@@ -1068,7 +1161,7 @@ export function getIndexHtml(): string {
               viewStatus = "signing";
               render();
 
-              var txParams = { from: connectedAddress, to: request.to };
+              var txParams = { from: request.from || connectedAddress, to: request.to };
               if (request.value) txParams.value = "0x" + BigInt(request.value).toString(16);
               if (request.data) txParams.data = request.data;
               if (request.gasLimit) txParams.gas = "0x" + BigInt(request.gasLimit).toString(16);
@@ -1095,7 +1188,8 @@ export function getIndexHtml(): string {
           },
 
           rejectTx: async function () {
-            await completeError(request.id, "User rejected transaction");
+            cleanupAccountsListener();
+            await rejectWith("User rejected transaction");
             window.close();
           },
 
@@ -1109,6 +1203,13 @@ export function getIndexHtml(): string {
               if (accounts.length > 0) address = accounts[0];
               else address = (await requestAccounts())[0];
               connectedAddress = address;
+
+              if (request.address && !addressMatch(address, request.address)) {
+                viewStatus = "wrong_address";
+                render();
+                startListeningForAccountChange();
+                return;
+              }
 
               if (request.chainId) {
                 var currentChainId = await getChainId();
@@ -1154,7 +1255,8 @@ export function getIndexHtml(): string {
           },
 
           rejectSign: async function () {
-            await completeError(request.id, "User rejected signing");
+            cleanupAccountsListener();
+            await rejectWith("User rejected signing");
             window.close();
           },
         };

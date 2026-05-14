@@ -43,6 +43,7 @@ export class PendingStore {
    */
   createSendTransactionRequest(params: {
     to: string;
+    from?: string;
     value?: string;
     data?: string;
     chainId?: number;

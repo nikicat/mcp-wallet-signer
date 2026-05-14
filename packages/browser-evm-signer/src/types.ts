@@ -29,6 +29,8 @@ export interface ConnectRequest extends BaseRequest {
 export interface SendTransactionRequest extends BaseRequest {
   type: "send_transaction";
   to: string;
+  /** Expected `from` address. When set, the browser UI refuses to sign unless the connected wallet matches. */
+  from?: string;
   value?: string;
   data?: string;
   gasLimit?: string;
@@ -81,6 +83,8 @@ export interface SuccessResult {
 export interface ErrorResult {
   success: false;
   error: string;
+  /** Discriminating code so consumers can react programmatically. See `SignerErrorCode`. */
+  code?: string;
 }
 
 export type RequestResult = SuccessResult | ErrorResult;
@@ -101,4 +105,6 @@ export interface CompleteApiRequest {
   success: boolean;
   result?: string;
   error?: string;
+  /** Discriminating code paired with `error`. See `SignerErrorCode`. */
+  code?: string;
 }

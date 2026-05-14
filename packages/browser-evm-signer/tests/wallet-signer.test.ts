@@ -1,4 +1,5 @@
-import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assertEquals, assertExists, assertInstanceOf } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { findWrongWalletAddressError, WrongWalletAddressError } from "../src/errors.ts";
 import { WalletSigner } from "../src/wallet-signer.ts";
 
 Deno.test("WalletSigner: constructor uses defaults", () => {
@@ -129,6 +130,46 @@ Deno.test({
       await connectPromise;
       assertExists(caught);
       assertExists(caught!.message.match(/User rejected/));
+    } finally {
+      await signer.shutdown();
+    }
+  },
+});
+
+Deno.test({
+  name: "WalletSigner: WRONG_WALLET_ADDRESS code throws WrongWalletAddressError",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const signer = new WalletSigner({ port: 0, openBrowser: false });
+    try {
+      await signer.start();
+      const port = signer.port!;
+
+      let caught: unknown;
+      const promise = signer.sendTransaction({ to: "0x0000000000000000000000000000000000000001" })
+        .catch((e) => {
+          caught = e;
+        });
+      await new Promise((r) => setTimeout(r, 0));
+      const [id] = signer.pendingStore.getPendingIds();
+
+      await fetch(`http://127.0.0.1:${port}/api/complete/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          success: false,
+          error: "Wrong wallet address: expected 0xaaa, got 0xbbb",
+          code: "WRONG_WALLET_ADDRESS",
+        }),
+      });
+
+      await promise;
+      assertInstanceOf(caught, WrongWalletAddressError);
+      assertExists(findWrongWalletAddressError(caught));
+      // And it survives one level of wrapping via `cause`:
+      const wrapped = new Error("outer", { cause: caught });
+      assertExists(findWrongWalletAddressError(wrapped));
     } finally {
       await signer.shutdown();
     }
