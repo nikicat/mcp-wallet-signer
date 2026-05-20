@@ -7,8 +7,10 @@ argument-hint: "[package] [patch|minor|major]"
 Publish a package from this monorepo via GitHub release. The publish workflow always publishes to **all supported registries** for the package (see table below) — there is no way to select individual registries.
 
 Arguments are optional and positional — any can be omitted:
-- `package`: `mcp-wallet-signer`, `browser-evm-signer`, `browser-tron-signer`, or `wallet-signer-core`
+- `package`: `mcp-wallet-signer`, `browser-evm-signer`, or `browser-tron-signer`
 - `bump`: `patch`, `minor`, or `major`
+
+Note: `wallet-signer-core` is an internal-only monorepo package — it's inlined into both chain packages by dnt, so no consumer would install it directly from npm. Don't publish it.
 
 ## Inferring missing arguments
 
@@ -24,7 +26,6 @@ When arguments are omitted, infer them from context:
 | mcp-wallet-signer | `packages/mcp-wallet-signer` | `npm.version` | `mcp-wallet-signer` | — | npm |
 | browser-evm-signer | `packages/browser-evm-signer` | top-level `version` | `browser-evm-signer` | `@nikicat/browser-evm-signer` | npm, jsr |
 | browser-tron-signer | `packages/browser-tron-signer` | top-level `version` | `browser-tron-signer` | `@nikicat/browser-tron-signer` | npm, jsr |
-| wallet-signer-core | `packages/wallet-signer-core` | top-level `version` | `wallet-signer-core` | `@nikicat/wallet-signer-core` | npm, jsr |
 
 ### First publish of a new package
 
@@ -116,7 +117,7 @@ gh release create <npm-name>@<new-version> --title "<npm-name>@<new-version>" --
 
 This triggers the `publish.yml` GitHub Actions workflow which parses the package name from the tag, builds, and publishes to all supported registries:
 - **npm job**: always runs — builds with `deno task build:npm` and publishes with `npm publish --provenance`
-- **jsr job**: runs only for packages with `jsr: true` in the workflow (currently `browser-evm-signer`, `browser-tron-signer`, `wallet-signer-core`)
+- **jsr job**: runs only for packages with `jsr: true` in the workflow (currently `browser-evm-signer`, `browser-tron-signer`)
 
 ### 7. Wait for publish workflow
 

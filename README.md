@@ -121,14 +121,14 @@ Environment variables (optional):
 
 ## Packages
 
-This is a monorepo with four packages:
+This is a monorepo with three published packages plus one internal one:
 
-| Package | Description |
-| ------- | ----------- |
-| [`wallet-signer-core`](packages/wallet-signer-core) | Chain-agnostic primitives (PendingStore, HTTP bridge, errors) shared by the chain packages |
-| [`browser-evm-signer`](packages/browser-evm-signer) | Standalone library — sign EVM transactions via MetaMask/Rabby/any EIP-6963 wallet |
-| [`browser-tron-signer`](packages/browser-tron-signer) | Standalone library — sign TRON transactions via TronLink |
-| [`mcp-wallet-signer`](packages/mcp-wallet-signer) | MCP server — exposes the EVM and TRON signers as MCP tools for AI agents |
+| Package | Published | Description |
+| ------- | --------- | ----------- |
+| [`wallet-signer-core`](packages/wallet-signer-core) | internal | Chain-agnostic primitives (PendingStore, HTTP bridge, errors). Bundled into each chain package at build time — never installed directly. |
+| [`browser-evm-signer`](packages/browser-evm-signer) | npm + JSR | Standalone library — sign EVM transactions via MetaMask/Rabby/any EIP-6963 wallet |
+| [`browser-tron-signer`](packages/browser-tron-signer) | npm + JSR | Standalone library — sign TRON transactions via TronLink |
+| [`mcp-wallet-signer`](packages/mcp-wallet-signer) | npm | MCP server — exposes the EVM and TRON signers as MCP tools for AI agents |
 
 Use the chain-specific packages directly if you want browser-based signing in your own Node.js/Deno app without MCP.
 

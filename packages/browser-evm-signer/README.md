@@ -7,7 +7,7 @@
 
 Most blockchain libraries require you to paste a private key or mnemonic into your app. `browser-evm-signer` takes a different approach: it opens your actual browser wallet (MetaMask, Rabby, etc.) for every signing action. You review and approve each transaction just like any dapp interaction.
 
-Sister package for TRON: [`browser-tron-signer`](https://www.npmjs.com/package/browser-tron-signer). Both build on the shared [`wallet-signer-core`](https://www.npmjs.com/package/wallet-signer-core) substrate.
+Sister package for TRON: [`browser-tron-signer`](https://www.npmjs.com/package/browser-tron-signer). Both share an internal `wallet-signer-core` substrate that's bundled into each package at build time (not a runtime dep).
 
 | Connect Wallet | Send Transaction | Sign Message |
 |:-:|:-:|:-:|
@@ -27,7 +27,7 @@ Sister package for TRON: [`browser-tron-signer`](https://www.npmjs.com/package/b
 npm install browser-evm-signer viem
 ```
 
-`wallet-signer-core` is pulled in transitively — no separate install needed. `viem` is a peer dep so consumers share a single copy.
+No separate install needed for the shared substrate — `wallet-signer-core` is bundled into this package at build time. `viem` is a peer dep so consumers share a single copy.
 
 ## Quick Start
 

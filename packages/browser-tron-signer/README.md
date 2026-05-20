@@ -7,7 +7,7 @@
 
 Most TRON libraries require you to paste a private key or mnemonic into your app. `browser-tron-signer` takes a different approach: it opens TronLink in your browser for every signing action. You review and approve each transaction just like any dapp interaction.
 
-Sister package to [`browser-evm-signer`](https://www.npmjs.com/package/browser-evm-signer). Both build on the shared [`wallet-signer-core`](https://www.npmjs.com/package/wallet-signer-core) substrate.
+Sister package to [`browser-evm-signer`](https://www.npmjs.com/package/browser-evm-signer). Both share an internal `wallet-signer-core` substrate that's bundled into each package at build time (not a runtime dep).
 
 ## Why?
 
@@ -23,7 +23,7 @@ Sister package to [`browser-evm-signer`](https://www.npmjs.com/package/browser-e
 npm install browser-tron-signer
 ```
 
-`wallet-signer-core` is a transitive dep — no separate install needed.
+No separate install needed for the shared substrate — `wallet-signer-core` is bundled into this package at build time.
 
 ## Quick Start
 

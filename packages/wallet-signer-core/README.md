@@ -1,11 +1,12 @@
 # wallet-signer-core
 
-[![npm version](https://img.shields.io/npm/v/wallet-signer-core)](https://www.npmjs.com/package/wallet-signer-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Chain-agnostic substrate for browser-wallet signing libraries.** Consumed by
+**Internal monorepo package — not published to npm or JSR.** Bundled into
 [`browser-evm-signer`](https://www.npmjs.com/package/browser-evm-signer) and
-[`browser-tron-signer`](https://www.npmjs.com/package/browser-tron-signer); not generally useful on its own.
+[`browser-tron-signer`](https://www.npmjs.com/package/browser-tron-signer) at build time (via dnt's `mappings`-less inlining), so consumers of those packages get the substrate without an extra install.
+
+If a third chain package were ever built outside this monorepo and needed to depend on this substrate, the build script + npm metadata are kept ready in `deno.jsonc` / `scripts/build-npm.ts` so it could be promoted to a real registry publication. Today, nobody installs it.
 
 ## What's in it
 
