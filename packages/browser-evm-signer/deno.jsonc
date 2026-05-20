@@ -14,8 +14,18 @@
     "repository": { "type": "git", "url": "https://github.com/nikicat/mcp-wallet-signer" },
     "engines": { "node": ">=18" },
     "keywords": [
-      "wallet", "ethereum", "evm", "metamask", "eip-6963", "browser-wallet",
-      "signing", "blockchain", "web3", "non-custodial", "transaction-signing", "viem"
+      "wallet",
+      "ethereum",
+      "evm",
+      "metamask",
+      "eip-6963",
+      "browser-wallet",
+      "signing",
+      "blockchain",
+      "web3",
+      "non-custodial",
+      "transaction-signing",
+      "viem"
     ]
   },
   "compilerOptions": {
@@ -34,8 +44,8 @@
   },
   "permissions": {
     "build-npm": { "read": true, "write": true, "env": true, "run": true, "net": true },
-    "test":      { "read": true, "env": true, "net": true, "run": true, "sys": true },
-    "test-e2e":  { "read": true, "env": true, "net": true, "run": true }
+    "test": { "read": true, "env": true, "net": true, "run": true, "sys": true },
+    "test-e2e": { "read": true, "env": true, "net": true, "run": true }
   },
   "tasks": {
     "dev": "deno run --allow-net --allow-env --allow-read --allow-run --allow-sys src/mod.ts",
@@ -48,17 +58,17 @@
     "test:browser:ui": "cd tests/e2e-browser && deno task test:ui",
     // Pin to the version used by the e2e tests (tests/e2e-browser/deno.json) — `@latest` will
     // install a Chromium build that mismatches the test runtime if npm releases a new minor.
-    "playwright:install": "deno run -A npm:@playwright/test@1.58.2/cli install chromium",
+    "playwright:install": "deno run -A npm:@playwright/test@1.60.0/cli install chromium",
     "install:all": "deno install && cd tests/e2e-browser && deno install",
 
     // `deno lint` / `deno fmt` (no args) walk the include lists from the fmt/lint config blocks
     // below. The `--ignore=tests/e2e-browser` flag is repeated because workspace mode appears
     // to bypass the config-level `exclude` for that nested workspace member; the CLI flag is
     // the reliable way to keep parent lint/fmt out of the child member's tree.
-    "check:types":  "deno check src/ tests/*.test.ts tests/e2e/ tests/fixtures/ scripts/ tools/",
-    "check:lint":   "deno lint --ignore=tests/e2e-browser",
-    "check:fmt":    "deno fmt --check --ignore=tests/e2e-browser",
-    "check:html":   "deno run -A npm:htmlhint src/index.html",
+    "check:types": "deno check src/ tests/*.test.ts tests/e2e/ tests/fixtures/ scripts/ tools/",
+    "check:lint": "deno lint --ignore=tests/e2e-browser",
+    "check:fmt": "deno fmt --check --ignore=tests/e2e-browser",
+    "check:html": "deno run -A npm:htmlhint src/index.html",
     "check:gen-ui": "deno run -A scripts/gen-web-ui.ts && git diff --quiet src/web-ui.gen.ts",
     "check": "deno task check:types && deno task check:lint && deno task check:fmt && deno task check:html && deno task check:gen-ui",
     "fmt": "deno fmt --ignore=tests/e2e-browser",

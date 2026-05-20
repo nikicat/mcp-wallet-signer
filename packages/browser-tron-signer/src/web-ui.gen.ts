@@ -773,11 +773,7 @@ export function getIndexHtml(): string {
 
           var isContract = request.type === "trigger_contract";
           var isDeploy = request.type === "deploy_contract";
-          $("tx-heading").textContent = isDeploy
-            ? "Deploy Contract"
-            : isContract
-            ? "Call Contract"
-            : "Send TRX";
+          $("tx-heading").textContent = isDeploy ? "Deploy Contract" : isContract ? "Call Contract" : "Send TRX";
 
           if (request.from && viewStatus !== "success" && viewStatus !== "wrong_address") {
             $("tx-required-text").textContent = request.from;
@@ -1052,9 +1048,7 @@ export function getIndexHtml(): string {
                 // types come from the ABI. Strip {type, value} wrappers if present (our API
                 // shape mirrors triggerContract, which does want {type, value} pairs).
                 var rawDeployParams = (request.parameters || []).map(function (p) {
-                  return (p && typeof p === "object" && Object.prototype.hasOwnProperty.call(p, "value"))
-                    ? p.value
-                    : p;
+                  return (p && typeof p === "object" && Object.prototype.hasOwnProperty.call(p, "value")) ? p.value : p;
                 });
                 var deployOpts = {
                   abi: request.abi,
@@ -1069,13 +1063,13 @@ export function getIndexHtml(): string {
                 unsignedTx = await tw.transactionBuilder.createSmartContract(deployOpts, connectedAddress);
                 var contractAddrHex = unsignedTx && (
                   unsignedTx.contract_address ||
-                  (unsignedTx.raw_data
-                    && unsignedTx.raw_data.contract
-                    && unsignedTx.raw_data.contract[0]
-                    && unsignedTx.raw_data.contract[0].parameter
-                    && unsignedTx.raw_data.contract[0].parameter.value
-                    && unsignedTx.raw_data.contract[0].parameter.value.new_contract
-                    && unsignedTx.raw_data.contract[0].parameter.value.new_contract.contract_address)
+                  (unsignedTx.raw_data &&
+                    unsignedTx.raw_data.contract &&
+                    unsignedTx.raw_data.contract[0] &&
+                    unsignedTx.raw_data.contract[0].parameter &&
+                    unsignedTx.raw_data.contract[0].parameter.value &&
+                    unsignedTx.raw_data.contract[0].parameter.value.new_contract &&
+                    unsignedTx.raw_data.contract[0].parameter.value.new_contract.contract_address)
                 );
                 if (!contractAddrHex) {
                   throw new Error("Failed to read contract_address from createSmartContract result");
