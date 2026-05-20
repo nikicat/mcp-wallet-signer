@@ -1,7 +1,7 @@
 {
   "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
   "name": "@nikicat/browser-tron-signer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Route TRON wallet signing requests to browser wallets like TronLink via a local HTTP bridge",
   "license": "MIT",
   "exports": "./src/mod.ts",
