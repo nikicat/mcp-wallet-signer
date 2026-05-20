@@ -7,7 +7,7 @@ argument-hint: "[package] [patch|minor|major]"
 Publish a package from this monorepo via GitHub release. The publish workflow always publishes to **all supported registries** for the package (see table below) — there is no way to select individual registries.
 
 Arguments are optional and positional — any can be omitted:
-- `package`: `mcp-wallet-signer` or `browser-evm-signer`
+- `package`: `mcp-wallet-signer`, `browser-evm-signer`, `browser-tron-signer`, or `wallet-signer-core`
 - `bump`: `patch`, `minor`, or `major`
 
 ## Inferring missing arguments
@@ -23,6 +23,18 @@ When arguments are omitted, infer them from context:
 |---|---|---|---|---|---|
 | mcp-wallet-signer | `packages/mcp-wallet-signer` | `npm.version` | `mcp-wallet-signer` | — | npm |
 | browser-evm-signer | `packages/browser-evm-signer` | top-level `version` | `browser-evm-signer` | `@nikicat/browser-evm-signer` | npm, jsr |
+| browser-tron-signer | `packages/browser-tron-signer` | top-level `version` | `browser-tron-signer` | `@nikicat/browser-tron-signer` | npm, jsr |
+| wallet-signer-core | `packages/wallet-signer-core` | top-level `version` | `wallet-signer-core` | `@nikicat/wallet-signer-core` | npm, jsr |
+
+### First publish of a new package
+
+New npm packages need a one-time manual bootstrap before the GitHub-Actions OIDC flow works. For the very first publish of a new package:
+
+1. Build locally: `cd packages/<dir> && deno task build:npm`
+2. From the user's shell: `cd packages/<dir>/npm && npm login && npm publish --provenance --access public` (interactive — user runs)
+3. JSR (if applicable): `cd packages/<dir> && deno publish --allow-dirty`
+4. Tag the commit and push, but **skip creating a GitHub release** for this initial version — the publish workflow would otherwise fire on `release: created` and fail because the version is already on the registry.
+5. The next version bump (≥ 0.x.y+1) goes through the normal workflow flow below.
 
 ## Tag format
 
@@ -104,7 +116,7 @@ gh release create <npm-name>@<new-version> --title "<npm-name>@<new-version>" --
 
 This triggers the `publish.yml` GitHub Actions workflow which parses the package name from the tag, builds, and publishes to all supported registries:
 - **npm job**: always runs — builds with `deno task build:npm` and publishes with `npm publish --provenance`
-- **jsr job**: runs only for packages with `jsr: true` in the workflow (currently `browser-evm-signer`)
+- **jsr job**: runs only for packages with `jsr: true` in the workflow (currently `browser-evm-signer`, `browser-tron-signer`, `wallet-signer-core`)
 
 ### 7. Wait for publish workflow
 

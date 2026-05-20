@@ -46,14 +46,20 @@ await build({
   typeCheck: false,
   test: false,
   importMap: "./deno.jsonc",
-  // Map the local browser-evm-signer import to the npm package
+  // Map the local chain-package imports to their published npm packages so dnt doesn't inline
+  // the chain code (HTML, viem, tron-builder, …) into the MCP bundle.
   mappings: {
     "../browser-evm-signer/src/mod.ts": {
       name: "browser-evm-signer",
+      version: "^0.2.0",
+    },
+    "../browser-tron-signer/src/mod.ts": {
+      name: "browser-tron-signer",
       version: "^0.1.0",
     },
   },
-  // browser-evm-signer isn't published yet, skip npm install (dependency is correct in package.json)
+  // Skip the post-build `npm install` (which would try to resolve those chain packages on the
+  // registry); dependencies end up correctly in the generated package.json.
   skipNpmInstall: true,
   package: {
     name: pkg.name,
