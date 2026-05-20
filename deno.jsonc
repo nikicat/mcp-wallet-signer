@@ -5,7 +5,9 @@
   "workspace": [
     "./packages/wallet-signer-core",
     "./packages/browser-evm-signer",
+    "./packages/browser-evm-signer/tests/e2e-browser",
     "./packages/browser-tron-signer",
+    "./packages/browser-tron-signer/tests/e2e-browser",
     "./packages/mcp-wallet-signer"
   ],
   "tasks": {

@@ -14,16 +14,8 @@
     "repository": { "type": "git", "url": "https://github.com/nikicat/mcp-wallet-signer" },
     "engines": { "node": ">=18" },
     "keywords": [
-      "wallet",
-      "tron",
-      "tronlink",
-      "tronweb",
-      "browser-wallet",
-      "signing",
-      "blockchain",
-      "tip-712",
-      "non-custodial",
-      "transaction-signing"
+      "wallet", "tron", "tronlink", "tronweb", "browser-wallet",
+      "signing", "blockchain", "tip-712", "non-custodial", "transaction-signing"
     ]
   },
   "compilerOptions": {
@@ -36,20 +28,8 @@
     "@types/node": "npm:@types/node@25.5.0"
   },
   "permissions": {
-    "build-npm": {
-      "read": true,
-      "write": true,
-      "env": true,
-      "run": true,
-      "net": true
-    },
-    "test": {
-      "read": true,
-      "env": true,
-      "net": true,
-      "run": true,
-      "sys": true
-    }
+    "build-npm": { "read": true, "write": true, "env": true, "run": true, "net": true },
+    "test":      { "read": true, "env": true, "net": true, "run": true, "sys": true }
   },
   "tasks": {
     "dev": "deno run --allow-net --allow-env --allow-read --allow-run --allow-sys src/mod.ts",
@@ -63,23 +43,29 @@
     // Pin to the version used by the e2e tests (tests/e2e-browser/deno.json) — `@latest` will
     // install a Chromium build that mismatches the test runtime if npm releases a new minor.
     "playwright:install": "deno run -A npm:@playwright/test@1.58.2/cli install chromium",
-    "install:all": "deno install && deno install --config tests/e2e-browser/deno.json",
-    "check": "deno check src/ tests/ scripts/ tools/ && deno lint src/ tests/ scripts/ tools/ && deno fmt --check src/ tests/ scripts/ tools/ && deno run -A npm:htmlhint src/index.html && deno run -A scripts/gen-web-ui.ts && git diff --quiet src/web-ui.gen.ts",
-    "fmt": "deno fmt src/ tests/ scripts/ tools/",
-    "lint": "deno lint src/ tests/ tools/"
+    "install:all": "deno install && cd tests/e2e-browser && deno install",
+
+    // See the EVM package for the rationale behind this split + the --ignore CLI flag usage.
+    "check:types":  "deno check src/ tests/*.test.ts tests/e2e/ scripts/ tools/",
+    "check:lint":   "deno lint --ignore=tests/e2e-browser",
+    "check:fmt":    "deno fmt --check --ignore=tests/e2e-browser",
+    "check:html":   "deno run -A npm:htmlhint src/index.html",
+    "check:gen-ui": "deno run -A scripts/gen-web-ui.ts && git diff --quiet src/web-ui.gen.ts",
+    "check": "deno task check:types && deno task check:lint && deno task check:fmt && deno task check:html && deno task check:gen-ui",
+    "fmt": "deno fmt --ignore=tests/e2e-browser",
+    "lint": "deno lint --ignore=tests/e2e-browser"
   },
   "fmt": {
+    "include": ["src/", "tests/", "scripts/", "tools/"],
     "useTabs": false,
     "lineWidth": 130,
     "indentWidth": 2,
     "singleQuote": false
   },
   "lint": {
-    "rules": {
-      "tags": ["recommended"]
-    }
+    "include": ["src/", "tests/", "tools/"],
+    "rules": { "tags": ["recommended"] }
   },
-  "exclude": ["dist/", "npm/", "tests/e2e-browser/"],
   "publish": {
     "exclude": ["tests/", "scripts/", "deno.lock"]
   }

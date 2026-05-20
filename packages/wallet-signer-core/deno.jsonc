@@ -50,22 +50,25 @@
   "tasks": {
     "build:npm": "deno run -P=build-npm scripts/build-npm.ts",
     "test": "deno test -P=test tests/",
-    "check": "deno check src/ tests/ scripts/ && deno lint src/ tests/ scripts/ && deno fmt --check src/ tests/ scripts/",
-    "fmt": "deno fmt src/ tests/ scripts/",
-    "lint": "deno lint src/ tests/"
+    // Paths come from the fmt/lint config blocks below; no e2e-browser here so no exclusions.
+    "check:types": "deno check src/ tests/ scripts/",
+    "check:lint":  "deno lint",
+    "check:fmt":   "deno fmt --check",
+    "check": "deno task check:types && deno task check:lint && deno task check:fmt",
+    "fmt": "deno fmt",
+    "lint": "deno lint"
   },
   "fmt": {
+    "include": ["src/", "tests/", "scripts/"],
     "useTabs": false,
     "lineWidth": 130,
     "indentWidth": 2,
     "singleQuote": false
   },
   "lint": {
-    "rules": {
-      "tags": ["recommended"]
-    }
+    "include": ["src/", "tests/"],
+    "rules": { "tags": ["recommended"] }
   },
-  "exclude": ["npm/"],
   "publish": {
     "exclude": ["tests/", "scripts/", "deno.lock"]
   }

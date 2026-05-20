@@ -37,20 +37,22 @@
   "tasks": {
     "dev": "deno run --allow-net --allow-env --allow-read --allow-run --allow-sys src/index.ts",
     "build:npm": "deno run -A scripts/build-npm.ts",
-    "check": "deno check src/ scripts/ && deno lint src/ scripts/ && deno fmt --check src/ scripts/",
-    "fmt": "deno fmt src/",
-    "lint": "deno lint src/"
+    "check:types": "deno check src/ scripts/",
+    "check:lint":  "deno lint",
+    "check:fmt":   "deno fmt --check",
+    "check": "deno task check:types && deno task check:lint && deno task check:fmt",
+    "fmt": "deno fmt",
+    "lint": "deno lint"
   },
   "fmt": {
+    "include": ["src/", "scripts/"],
     "useTabs": false,
     "lineWidth": 130,
     "indentWidth": 2,
     "singleQuote": false
   },
   "lint": {
-    "rules": {
-      "tags": ["recommended"]
-    }
-  },
-  "exclude": ["npm/"]
+    "include": ["src/"],
+    "rules": { "tags": ["recommended"] }
+  }
 }
