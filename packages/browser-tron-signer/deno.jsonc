@@ -55,7 +55,14 @@
     "dev": "deno run --allow-net --allow-env --allow-read --allow-run --allow-sys src/mod.ts",
     "gen:web-ui": "deno run -A scripts/gen-web-ui.ts",
     "build:npm": "deno run -P=build-npm scripts/build-npm.ts",
-    "test": "deno test -P=test tests/",
+    "test": "deno test -P=test tests/ --ignore=tests/e2e-browser",
+    "test:e2e": "deno test -P=test tests/e2e/",
+    "test:browser": "cd tests/e2e-browser && deno task test",
+    "test:browser:ui": "cd tests/e2e-browser && deno task test:ui",
+    // Pin to the version used by the e2e tests (tests/e2e-browser/deno.json) — `@latest` will
+    // install a Chromium build that mismatches the test runtime if npm releases a new minor.
+    "playwright:install": "deno run -A npm:@playwright/test@1.58.2/cli install chromium",
+    "install:all": "deno install && deno install --config tests/e2e-browser/deno.json",
     "check": "deno check src/ tests/ scripts/ && deno lint src/ tests/ scripts/ && deno fmt --check src/ tests/ scripts/ && deno run -A npm:htmlhint src/index.html && deno run -A scripts/gen-web-ui.ts && git diff --quiet src/web-ui.gen.ts",
     "fmt": "deno fmt src/ tests/ scripts/",
     "lint": "deno lint src/ tests/"
@@ -72,7 +79,7 @@
     }
   },
   "nodeModulesDir": "auto",
-  "exclude": ["dist/", "npm/"],
+  "exclude": ["dist/", "npm/", "tests/e2e-browser/"],
   "publish": {
     "exclude": ["tests/", "scripts/", "deno.lock"]
   }

@@ -1,13 +1,116 @@
-import { createHttpServer as coreCreateHttpServer } from "wallet-signer-core";
+import { createHttpServer as coreCreateHttpServer, type ExtraApiContext, jsonResponse } from "wallet-signer-core";
 
 import { getPort } from "./config.ts";
-import { PendingStore } from "./pending-store.ts";
+import { PendingStore, pendingStore as defaultPendingStore } from "./pending-store.ts";
 import type { TronPendingRequest } from "./types.ts";
 import { getIndexHtml } from "./web-ui.gen.ts";
 
+// === Test endpoints (for e2e browser testing) ===
+// Stored test results for retrieval by /api/test/result/:id. Module-scoped on purpose: these
+// are only used by the browser e2e test harness, which keeps everything in one process.
+const testResults = new Map<string, { success: boolean; result?: string; error?: string }>();
+
+function handleTestRoutes(ctx: ExtraApiContext<TronPendingRequest>): Response | null {
+  const { pathname, method, body, store } = ctx;
+  const tronStore = store as PendingStore;
+
+  if (pathname === "/api/test/create-request" && method === "POST") {
+    const data = body as Record<string, unknown>;
+    const type = data?.type as string;
+
+    let id: string;
+    let promise: Promise<unknown>;
+
+    switch (type) {
+      case "connect": {
+        type ConnectParams = NonNullable<Parameters<typeof tronStore.createConnectRequest>[0]>;
+        const r = tronStore.createConnectRequest({
+          network: data.network as ConnectParams["network"],
+          address: data.address as string | undefined,
+        });
+        id = r.id;
+        promise = r.promise;
+        break;
+      }
+      case "send_transaction": {
+        const r = tronStore.createSendTransactionRequest({
+          to: data.to as string,
+          amount: data.amount as string,
+          from: data.from as string | undefined,
+          data: data.data as string | undefined,
+          network: data.network as Parameters<typeof tronStore.createSendTransactionRequest>[0]["network"],
+        });
+        id = r.id;
+        promise = r.promise;
+        break;
+      }
+      case "trigger_contract": {
+        const r = tronStore.createTriggerContractRequest({
+          contractAddress: data.contractAddress as string,
+          functionSelector: data.functionSelector as string,
+          parameters: data.parameters as Parameters<typeof tronStore.createTriggerContractRequest>[0]["parameters"],
+          from: data.from as string | undefined,
+          feeLimit: data.feeLimit as string | undefined,
+          callValue: data.callValue as string | undefined,
+          network: data.network as Parameters<typeof tronStore.createTriggerContractRequest>[0]["network"],
+        });
+        id = r.id;
+        promise = r.promise;
+        break;
+      }
+      case "sign_message": {
+        const r = tronStore.createSignMessageRequest({
+          message: data.message as string,
+          address: data.address as string | undefined,
+          network: data.network as Parameters<typeof tronStore.createSignMessageRequest>[0]["network"],
+        });
+        id = r.id;
+        promise = r.promise;
+        break;
+      }
+      case "sign_typed_data": {
+        const r = tronStore.createSignTypedDataRequest({
+          domain: data.domain as Parameters<typeof tronStore.createSignTypedDataRequest>[0]["domain"],
+          types: data.types as Parameters<typeof tronStore.createSignTypedDataRequest>[0]["types"],
+          primaryType: data.primaryType as string,
+          message: data.message as Record<string, unknown>,
+          address: data.address as string | undefined,
+          network: data.network as Parameters<typeof tronStore.createSignTypedDataRequest>[0]["network"],
+        });
+        id = r.id;
+        promise = r.promise;
+        break;
+      }
+      default:
+        return jsonResponse(400, { error: "Invalid request type" });
+    }
+
+    promise.then((result) => {
+      testResults.set(id, result as { success: boolean; result?: string; error?: string });
+    }).catch((err) => {
+      testResults.set(id, { success: false, error: err.message });
+    });
+
+    return jsonResponse(200, { id });
+  }
+
+  const testResultMatch = pathname.match(/^\/api\/test\/result\/([a-f0-9-]+)$/);
+  if (testResultMatch && method === "GET") {
+    const id = testResultMatch[1];
+    const result = testResults.get(id);
+    if (result === undefined) {
+      if (store.has(id)) return jsonResponse(200, { pending: true });
+      return jsonResponse(404, { error: "Result not found" });
+    }
+    return jsonResponse(200, result);
+  }
+
+  return null;
+}
+
 /**
- * Create an HTTP server bound to a TRON {@linkcode PendingStore}. Returns the port and a stop
- * function. Mirrors `browser-evm-signer/createHttpServer`; no test-only routes today.
+ * Create an HTTP server bound to a TRON {@linkcode PendingStore}.
+ * Returns the port and a stop function.
  */
 export function createHttpServer(
   store: PendingStore,
@@ -17,5 +120,11 @@ export function createHttpServer(
     store,
     port: port ?? getPort(),
     getIndexHtml,
+    extraApi: handleTestRoutes,
   });
+}
+
+/** Start a test server on a random port using the default {@linkcode PendingStore}. */
+export function startTestServer(): Promise<{ port: number; stop: () => Promise<void> }> {
+  return createHttpServer(defaultPendingStore, 0);
 }

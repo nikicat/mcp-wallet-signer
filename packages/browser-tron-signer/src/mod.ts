@@ -19,6 +19,6 @@ export type { NetworkConfig, TronNetwork, TypedDataDomain, TypedDataField } from
 export { findWrongWalletAddressError, SignerErrorCode, WrongWalletAddressError } from "wallet-signer-core";
 
 export { PendingStore, pendingStore } from "./pending-store.ts";
-export { createHttpServer } from "./http-server.ts";
+export { createHttpServer, startTestServer } from "./http-server.ts";
 export { buildConnectUrl, buildSignUrl, openBrowser } from "wallet-signer-core";
 export { VERSION } from "./version.ts";

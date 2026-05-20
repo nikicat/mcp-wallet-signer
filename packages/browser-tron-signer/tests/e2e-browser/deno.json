@@ -2,7 +2,8 @@
   "tasks": {
     "prepare": "deno cache --node-modules-dir playwright.config.ts wallet-flow.spec.ts",
     // Pin runner version to match the chromium installed by `playwright:install` —
-    // `@latest` drifts and breaks browser-binary discovery when a new Playwright minor ships.
+    // `@latest` drifts and breaks browser-binary discovery (Playwright 1.59/1.60 ship different
+    // chromium revisions).
     "test": "deno task prepare && deno run -A npm:@playwright/test@1.58.2/cli test",
     "test:ui": "deno task prepare && deno run -A npm:@playwright/test@1.58.2/cli test --ui",
     "check": "deno check . && deno lint . && deno fmt --check ."
