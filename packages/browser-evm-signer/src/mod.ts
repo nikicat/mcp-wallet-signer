@@ -5,6 +5,7 @@ export {
   type SignMessageParams,
   type SignResult,
   type SignTypedDataParams,
+  type TokenBalanceResult,
   type TransactionResult,
   WalletSigner,
   type WalletSignerOptions,

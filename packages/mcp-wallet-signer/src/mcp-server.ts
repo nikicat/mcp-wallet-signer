@@ -20,11 +20,13 @@ import {
 import {
   ConnectWalletSchema,
   GetBalanceSchema,
+  GetTokenBalanceSchema,
   SendTransactionSchema,
   SignMessageSchema,
   SignTypedDataSchema,
   TronConnectWalletSchema,
   TronGetBalanceSchema,
+  TronGetTokenBalanceSchema,
   TronSendTransactionSchema,
   TronSignMessageSchema,
   TronSignTypedDataSchema,
@@ -174,6 +176,29 @@ const TOOLS = [
       required: ["address"],
     },
   },
+  {
+    name: "get_token_balance",
+    description:
+      "Get the ERC-20 token balance of an address. Reads balanceOf/decimals/symbol from the contract via eth_call — no browser interaction.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        contractAddress: {
+          type: "string",
+          description: "ERC-20 token contract address (0x...)",
+        },
+        address: {
+          type: "string",
+          description: "Holder address whose token balance to query (0x...)",
+        },
+        chainId: {
+          type: "number",
+          description: "Chain ID (default: 1)",
+        },
+      },
+      required: ["contractAddress", "address"],
+    },
+  },
   // === TRON tools ===
   {
     name: "tron_connect_wallet",
@@ -293,6 +318,20 @@ const TOOLS = [
         network: { type: "string", enum: ["mainnet", "shasta", "nile"] },
       },
       required: ["address"],
+    },
+  },
+  {
+    name: "tron_get_token_balance",
+    description:
+      "Get the TRC-20 token balance of a TRON address. Reads balanceOf/decimals/symbol via TronGrid's triggerconstantcontract — no browser interaction.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        contractAddress: { type: "string", description: "TRC-20 token contract address (T...)" },
+        address: { type: "string", description: "Holder address whose token balance to query (T...)" },
+        network: { type: "string", enum: ["mainnet", "shasta", "nile"] },
+      },
+      required: ["contractAddress", "address"],
     },
   },
 ];
@@ -558,6 +597,14 @@ export function createMcpServer(signer?: WalletSigner, tronSigner?: TronWalletSi
           const { balance, wei, symbol } = await walletSigner.getBalance(parsed.data);
           return textResult(`Balance: ${balance} ${symbol}\nWei: ${wei}`);
         }
+        case "get_token_balance": {
+          const parsed = GetTokenBalanceSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { balance, raw, symbol, decimals } = await walletSigner.getTokenBalance(parsed.data);
+          return textResult(
+            `Balance: ${balance} ${symbol}\nRaw: ${raw}\nDecimals: ${decimals}\nContract: ${parsed.data.contractAddress}`,
+          );
+        }
         case "tron_connect_wallet": {
           const parsed = TronConnectWalletSchema.safeParse(args);
           if (!parsed.success) return errorResult(parsed.error.message);
@@ -603,6 +650,14 @@ export function createMcpServer(signer?: WalletSigner, tronSigner?: TronWalletSi
           if (!parsed.success) return errorResult(parsed.error.message);
           const { balance, sun, symbol } = await tronWalletSigner.getBalance(parsed.data);
           return textResult(`Balance: ${balance} ${symbol}\nSun: ${sun}`);
+        }
+        case "tron_get_token_balance": {
+          const parsed = TronGetTokenBalanceSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { balance, raw, symbol, decimals } = await tronWalletSigner.getTokenBalance(parsed.data);
+          return textResult(
+            `Balance: ${balance} ${symbol}\nRaw: ${raw}\nDecimals: ${decimals}\nContract: ${parsed.data.contractAddress}`,
+          );
         }
         default:
           return errorResult(`Unknown tool: ${name}`);

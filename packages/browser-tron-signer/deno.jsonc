@@ -35,6 +35,7 @@
     // source during dev/build (wallet-signer-core is a workspace member with this name).
     "wallet-signer-core": "jsr:@nikicat/wallet-signer-core@^0.1.0",
     "open": "npm:open@11.0.0",
+    "@scure/base": "npm:@scure/base@1.2.6",
     "@types/node": "npm:@types/node@25.5.0"
   },
   "permissions": {

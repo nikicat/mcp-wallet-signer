@@ -50,6 +50,12 @@ export const GetBalanceSchema = z.object({
   chainId: z.number().optional().describe("Chain ID (default: 1)"),
 });
 
+export const GetTokenBalanceSchema = z.object({
+  contractAddress: z.string().describe("ERC-20 token contract address (0x...)"),
+  address: z.string().describe("Holder address to query the token balance of (0x...)"),
+  chainId: z.number().optional().describe("Chain ID (default: 1)"),
+});
+
 // === TRON schemas ===
 
 const TronNetworkSchema = z.enum(["mainnet", "shasta", "nile"]);
@@ -108,5 +114,11 @@ export const TronSignTypedDataSchema = z.object({
 
 export const TronGetBalanceSchema = z.object({
   address: z.string().describe("TRON address to get balance for (Base58, starts with T)"),
+  network: TronNetworkSchema.optional().describe("Tron network (default: mainnet)"),
+});
+
+export const TronGetTokenBalanceSchema = z.object({
+  contractAddress: z.string().describe("TRC-20 token contract address (Base58, starts with T)"),
+  address: z.string().describe("Holder address to query the token balance of (Base58, starts with T)"),
   network: TronNetworkSchema.optional().describe("Tron network (default: mainnet)"),
 });

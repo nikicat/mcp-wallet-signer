@@ -1,4 +1,4 @@
-import { createPublicClient, formatEther, http } from "viem";
+import { createPublicClient, erc20Abi, formatEther, formatUnits, http } from "viem";
 
 import { PendingStore } from "./pending-store.ts";
 import { createHttpServer } from "./http-server.ts";
@@ -68,6 +68,18 @@ export interface BalanceResult {
   balance: string;
   wei: string;
   symbol: string;
+}
+
+/** Result of {@linkcode WalletSigner.getTokenBalance}: ERC-20 balance formatted and raw, plus token metadata. */
+export interface TokenBalanceResult {
+  /** Human-readable balance, divided by `10 ** decimals`. */
+  balance: string;
+  /** Raw `balanceOf` return value as a decimal string (uint256). */
+  raw: string;
+  /** Token symbol as reported by the contract. `""` if the call reverted. */
+  symbol: string;
+  /** Token decimals as reported by the contract. */
+  decimals: number;
 }
 
 /**
@@ -220,6 +232,37 @@ export class WalletSigner {
       balance: formatEther(balance),
       wei: balance.toString(),
       symbol,
+    };
+  }
+
+  /**
+   * Get the ERC-20 token balance of an address. Reads `balanceOf`, `decimals`, and `symbol`
+   * from the contract — no browser interaction. `symbol` falls back to `""` if the token does
+   * not implement it (some non-standard contracts revert the call).
+   */
+  async getTokenBalance(params: {
+    contractAddress: string;
+    address: string;
+    chainId?: number;
+  }): Promise<TokenBalanceResult> {
+    const chainId = params.chainId ?? this._defaultChainId;
+    const rpcUrl = getRpcUrl(chainId);
+    if (!rpcUrl) throw new Error(`Unknown chain ID: ${chainId}. No RPC URL configured.`);
+
+    const client = createPublicClient({ transport: http(rpcUrl) });
+    const contract = { address: params.contractAddress as `0x${string}`, abi: erc20Abi } as const;
+
+    const [raw, decimals, symbol] = await Promise.all([
+      client.readContract({ ...contract, functionName: "balanceOf", args: [params.address as `0x${string}`] }),
+      client.readContract({ ...contract, functionName: "decimals" }),
+      client.readContract({ ...contract, functionName: "symbol" }).catch(() => ""),
+    ]);
+
+    return {
+      balance: formatUnits(raw, decimals),
+      raw: raw.toString(),
+      symbol,
+      decimals,
     };
   }
 

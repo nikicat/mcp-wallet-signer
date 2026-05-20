@@ -1,3 +1,5 @@
+import { base58 } from "@scure/base";
+
 import { buildConnectUrl, buildSignUrl, openBrowser, SignerErrorCode, WrongWalletAddressError } from "wallet-signer-core";
 import type { RequestResult } from "wallet-signer-core";
 
@@ -110,6 +112,18 @@ export interface BalanceResult {
   /** Balance in SUN (1 TRX = 1,000,000 SUN). */
   sun: string;
   symbol: string;
+}
+
+/** Result of {@linkcode WalletSigner.getTokenBalance}: TRC-20 balance formatted and raw, plus token metadata. */
+export interface TokenBalanceResult {
+  /** Human-readable balance, divided by `10 ** decimals`. */
+  balance: string;
+  /** Raw `balanceOf` return value as a decimal string (uint256). */
+  raw: string;
+  /** Token symbol as reported by the contract. `""` if the call reverted. */
+  symbol: string;
+  /** Token decimals as reported by the contract. */
+  decimals: number;
 }
 
 /**
@@ -293,6 +307,39 @@ export class WalletSigner {
     return { balance: formatSun(sun, decimals), sun: sun.toString(), symbol };
   }
 
+  /**
+   * Get the TRC-20 token balance of a TRON address via `triggerconstantcontract`. No browser
+   * interaction. `symbol` falls back to `""` if the token does not implement it.
+   */
+  async getTokenBalance(params: {
+    contractAddress: string;
+    address: string;
+    network?: TronNetwork;
+  }): Promise<TokenBalanceResult> {
+    const network = params.network ?? this._defaultNetwork;
+    const fullHost = getFullHost(network);
+    if (!fullHost) throw new Error(`Unknown TRON network: ${network}`);
+
+    const holderArg = padAddressArg(tronAddressToHex20(params.address));
+
+    const [rawHex, decimalsHex, symbolHex] = await Promise.all([
+      triggerConstant(fullHost, params.contractAddress, "balanceOf(address)", holderArg),
+      triggerConstant(fullHost, params.contractAddress, "decimals()", ""),
+      triggerConstant(fullHost, params.contractAddress, "symbol()", "").catch(() => ""),
+    ]);
+
+    const raw = BigInt("0x" + rawHex);
+    const decimals = Number(BigInt("0x" + decimalsHex));
+    const symbol = symbolHex ? decodeAbiString(symbolHex) : "";
+
+    return {
+      balance: formatSun(raw, decimals),
+      raw: raw.toString(),
+      symbol,
+      decimals,
+    };
+  }
+
   /** Shut down the HTTP server and cancel all pending requests. */
   async shutdown(): Promise<void> {
     if (this._httpServer) {
@@ -314,6 +361,60 @@ function formatSun(sun: bigint, decimals: number): string {
   const frac = (abs % divisor).toString().padStart(decimals, "0").replace(/0+$/, "");
   const body = frac.length > 0 ? `${whole}.${frac}` : `${whole}`;
   return negative ? `-${body}` : body;
+}
+
+/**
+ * Convert a TRON Base58 address (T…) to its 20-byte hex form (no `41` prefix, no `0x`).
+ * Skips checksum verification — TronGrid rejects malformed addresses downstream anyway.
+ */
+function tronAddressToHex20(addr: string): string {
+  const decoded = base58.decode(addr);
+  if (decoded.length !== 25) throw new Error(`Invalid TRON address length: ${addr}`);
+  if (decoded[0] !== 0x41) throw new Error(`Invalid TRON address prefix: ${addr}`);
+  return [...decoded.slice(1, 21)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Left-pad a 20-byte hex address to a 32-byte ABI `address` argument. */
+function padAddressArg(hex20: string): string {
+  return "0".repeat(24) + hex20;
+}
+
+/** Decode an ABI-encoded `string` return value (offset + length + utf-8 bytes). */
+function decodeAbiString(hex: string): string {
+  if (hex.length < 128) return "";
+  const length = Number(BigInt("0x" + hex.slice(64, 128)));
+  if (length === 0) return "";
+  const dataHex = hex.slice(128, 128 + length * 2);
+  const bytes = new Uint8Array(length);
+  for (let i = 0; i < length; i++) bytes[i] = parseInt(dataHex.slice(i * 2, i * 2 + 2), 16);
+  return new TextDecoder().decode(bytes);
+}
+
+/** POST a `triggerconstantcontract` read call; return the first `constant_result` hex string. */
+async function triggerConstant(
+  fullHost: string,
+  contractAddress: string,
+  functionSelector: string,
+  parameter: string,
+): Promise<string> {
+  const resp = await fetch(`${fullHost}/wallet/triggerconstantcontract`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      // Owner must be a valid TRON address; the contract itself is always valid and avoids
+      // needing a real holder for read-only calls.
+      owner_address: contractAddress,
+      contract_address: contractAddress,
+      function_selector: functionSelector,
+      parameter,
+      visible: true,
+    }),
+  });
+  if (!resp.ok) throw new Error(`triggerconstantcontract failed: HTTP ${resp.status}`);
+  const data = await resp.json() as { constant_result?: string[]; result?: { message?: string } };
+  const result = data.constant_result?.[0];
+  if (!result) throw new Error(`triggerconstantcontract returned no result: ${JSON.stringify(data)}`);
+  return result;
 }
 
 // Side-effect-free re-export so callers can reach NETWORKS without an extra import.

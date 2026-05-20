@@ -64,6 +64,7 @@ bunx mcp-wallet-signer
 | `sign_message`     | Sign arbitrary message (personal_sign) | Yes              |
 | `sign_typed_data`  | Sign EIP-712 typed data                | Yes              |
 | `get_balance`      | Read ETH balance (via RPC)             | No               |
+| `get_token_balance`| Read ERC-20 balance (`balanceOf`/`decimals`/`symbol`) | No |
 
 ### TRON (TronLink)
 
@@ -75,6 +76,7 @@ bunx mcp-wallet-signer
 | `tron_sign_message`     | Sign arbitrary message (`signMessageV2`)               | Yes              |
 | `tron_sign_typed_data`  | Sign TIP-712 typed data                                | Yes              |
 | `tron_get_balance`      | Read TRX balance (via TronGrid)                        | No               |
+| `tron_get_token_balance`| Read TRC-20 balance (`balanceOf`/`decimals`/`symbol`)  | No               |
 
 ## How It Works
 

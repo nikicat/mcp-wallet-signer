@@ -8,6 +8,7 @@ export {
   type SignMessageParams,
   type SignResult,
   type SignTypedDataParams,
+  type TokenBalanceResult,
   type TransactionResult,
   type TriggerContractParams,
   WalletSigner,
