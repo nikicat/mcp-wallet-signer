@@ -23,7 +23,9 @@
     "lib": ["deno.window", "ES2022"]
   },
   "imports": {
-    "wallet-signer-core": "../wallet-signer-core/src/mod.ts",
+    // JSR specifier so `deno publish` accepts it; the Deno workspace resolves it to local
+    // source during dev/build (wallet-signer-core is a workspace member with this name).
+    "wallet-signer-core": "jsr:@nikicat/wallet-signer-core@^0.1.0",
     "open": "npm:open@11.0.0",
     "@types/node": "npm:@types/node@25.5.0"
   },
