@@ -51,11 +51,11 @@ await build({
   mappings: {
     "../browser-evm-signer/src/mod.ts": {
       name: "browser-evm-signer",
-      version: "^0.2.0",
+      version: "^0.3.0",
     },
     "../browser-tron-signer/src/mod.ts": {
       name: "browser-tron-signer",
-      version: "^0.2.0",
+      version: "^0.3.0",
     },
   },
   // Skip the post-build `npm install` (which would try to resolve those chain packages on the
