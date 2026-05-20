@@ -55,7 +55,7 @@ await build({
     },
     "../browser-tron-signer/src/mod.ts": {
       name: "browser-tron-signer",
-      version: "^0.1.0",
+      version: "^0.2.0",
     },
   },
   // Skip the post-build `npm install` (which would try to resolve those chain packages on the
