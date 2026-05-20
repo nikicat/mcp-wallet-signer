@@ -102,6 +102,147 @@ Deno.test({
 });
 
 Deno.test({
+  name: "WalletSigner: deployContract returns parsed txHash + contractAddress",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const signer = new WalletSigner({ port: 0, openBrowser: false });
+    try {
+      await signer.start();
+      const port = signer.port!;
+
+      const deployPromise = signer.deployContract({
+        abi: [{ type: "constructor", inputs: [] }],
+        bytecode: "0x6080",
+        contractName: "Greeter",
+        feeLimit: "1500000000",
+        network: "shasta",
+      });
+      await new Promise((r) => setTimeout(r, 0));
+
+      const [id] = signer.pendingStore.getPendingIds();
+      const req = signer.pendingStore.get(id);
+      assertExists(req);
+      if (req.type === "deploy_contract") {
+        assertEquals(req.contractName, "Greeter");
+        assertEquals(req.bytecode, "0x6080");
+        assertEquals(req.network, "shasta");
+      }
+
+      const completeRes = await fetch(`http://127.0.0.1:${port}/api/complete/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          success: true,
+          result: JSON.stringify({ txHash: "tx-hash-deploy", contractAddress: "TDeployedXYZ" }),
+        }),
+      });
+      assertEquals(completeRes.ok, true);
+
+      const { txHash, contractAddress, approvalUrl } = await deployPromise;
+      assertEquals(txHash, "tx-hash-deploy");
+      assertEquals(contractAddress, "TDeployedXYZ");
+      assertExists(approvalUrl);
+    } finally {
+      await signer.shutdown();
+    }
+  },
+});
+
+Deno.test({
+  name: "WalletSigner: deployContract uses defaultNetwork when params.network omitted",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const signer = new WalletSigner({ port: 0, defaultNetwork: "nile", openBrowser: false });
+    try {
+      await signer.start();
+      const deployPromise = signer.deployContract({ abi: [], bytecode: "deadbeef" });
+      await new Promise((r) => setTimeout(r, 0));
+
+      const [id] = signer.pendingStore.getPendingIds();
+      const req = signer.pendingStore.get(id);
+      assertExists(req);
+      if (req.type === "deploy_contract") assertEquals(req.network, "nile");
+
+      // Drain so shutdown doesn't leave a dangling rejection.
+      signer.pendingStore.cancel(id, "cleanup");
+      try {
+        await deployPromise;
+      } catch { /* expected */ }
+    } finally {
+      await signer.shutdown();
+    }
+  },
+});
+
+Deno.test({
+  name: "WalletSigner: deployContract throws on malformed JSON result",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const signer = new WalletSigner({ port: 0, openBrowser: false });
+    try {
+      await signer.start();
+      const port = signer.port!;
+
+      let caught: unknown;
+      // Attach catch handler synchronously so the rejection is never unhandled,
+      // even if completion arrives before we re-await below.
+      const deployPromise = signer.deployContract({ abi: [], bytecode: "0x00" }).catch((e) => {
+        caught = e;
+      });
+      await new Promise((r) => setTimeout(r, 0));
+      const [id] = signer.pendingStore.getPendingIds();
+
+      await fetch(`http://127.0.0.1:${port}/api/complete/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ success: true, result: "not-json-at-all" }),
+      });
+
+      await deployPromise;
+      assertInstanceOf(caught, Error);
+      assertExists((caught as Error).message.match(/malformed deploy_contract result/));
+    } finally {
+      await signer.shutdown();
+    }
+  },
+});
+
+Deno.test({
+  name: "WalletSigner: deployContract throws when result is missing fields",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const signer = new WalletSigner({ port: 0, openBrowser: false });
+    try {
+      await signer.start();
+      const port = signer.port!;
+
+      let caught: unknown;
+      const deployPromise = signer.deployContract({ abi: [], bytecode: "0x00" }).catch((e) => {
+        caught = e;
+      });
+      await new Promise((r) => setTimeout(r, 0));
+      const [id] = signer.pendingStore.getPendingIds();
+
+      await fetch(`http://127.0.0.1:${port}/api/complete/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ success: true, result: JSON.stringify({ txHash: "only-tx" }) }),
+      });
+
+      await deployPromise;
+      assertInstanceOf(caught, Error);
+      assertExists((caught as Error).message.match(/missing fields/));
+    } finally {
+      await signer.shutdown();
+    }
+  },
+});
+
+Deno.test({
   name: "WalletSigner: WRONG_WALLET_ADDRESS code throws WrongWalletAddressError",
   sanitizeResources: false,
   sanitizeOps: false,

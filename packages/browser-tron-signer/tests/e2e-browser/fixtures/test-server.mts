@@ -32,7 +32,7 @@ export async function stopServer(): Promise<void> {
 
 /** Create a pending request via the test API. */
 export async function createTestRequest(
-  type: "connect" | "send_transaction" | "trigger_contract" | "sign_message" | "sign_typed_data",
+  type: "connect" | "send_transaction" | "trigger_contract" | "deploy_contract" | "sign_message" | "sign_typed_data",
   data: Record<string, unknown> = {},
 ): Promise<{ id: string }> {
   const res = await fetch(`${baseUrl}/api/test/create-request`, {

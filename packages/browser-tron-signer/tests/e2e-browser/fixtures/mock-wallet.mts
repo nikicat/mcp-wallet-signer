@@ -18,6 +18,11 @@ export const FAKE_TX_ID = "abcdef0123456789abcdef0123456789abcdef0123456789abcde
 export const FAKE_SIGNATURE = "0x" + "cd".repeat(65);
 export const FAKE_TYPED_SIGNATURE = "0x" + "ef".repeat(65);
 
+// The deploy flow reads contract_address from createSmartContract's result and converts it via
+// tw.address.fromHex(). Both halves of that pair are mocked to canned values.
+export const FAKE_CONTRACT_HEX = "41" + "ab".repeat(20);
+export const FAKE_CONTRACT_BASE58 = "TDeployedMockContract000000000000XYZ";
+
 export interface MockTronLinkOptions {
   address?: string;
   /** When true, requestAccounts returns {code: 4001} simulating user rejection. */
@@ -46,6 +51,8 @@ export function getMockProviderScript(options?: MockTronLinkOptions): string {
   const FAKE_TX_ID = ${JSON.stringify(FAKE_TX_ID)};
   const FAKE_SIGNATURE = ${JSON.stringify(FAKE_SIGNATURE)};
   const FAKE_TYPED_SIGNATURE = ${JSON.stringify(FAKE_TYPED_SIGNATURE)};
+  const FAKE_CONTRACT_HEX = ${JSON.stringify(FAKE_CONTRACT_HEX)};
+  const FAKE_CONTRACT_BASE58 = ${JSON.stringify(FAKE_CONTRACT_BASE58)};
 
   const tronWeb = {
     defaultAddress: { base58: ADDRESS, hex: "41" + "00".repeat(20), name: false },
@@ -75,6 +82,28 @@ export function getMockProviderScript(options?: MockTronLinkOptions): string {
             raw_data_hex: "deadbeef",
           },
         };
+      },
+      async createSmartContract(options, ownerAddress) {
+        console.log("[MockTronWeb] createSmartContract:", options && options.name, ownerAddress);
+        return {
+          txID: FAKE_TX_ID,
+          contract_address: FAKE_CONTRACT_HEX,
+          raw_data: {
+            contract: [{
+              type: "CreateSmartContract",
+              parameter: { value: { new_contract: { contract_address: FAKE_CONTRACT_HEX, abi: options.abi, bytecode: options.bytecode } } },
+            }],
+          },
+          raw_data_hex: "deadbeef",
+        };
+      },
+    },
+
+    address: {
+      fromHex(hex) {
+        console.log("[MockTronWeb] address.fromHex:", hex);
+        // Real conversion isn't needed for UI tests — return our canned Base58 value.
+        return FAKE_CONTRACT_BASE58;
       },
     },
 

@@ -74,6 +74,61 @@ Deno.test("PendingStore - creates trigger_contract request", async () => {
   await promise;
 });
 
+Deno.test("PendingStore - creates deploy_contract request", async () => {
+  const abi = [{ type: "constructor", inputs: [{ name: "owner", type: "address" }] }];
+  const { id, promise } = pendingStore.createDeployContractRequest({
+    abi,
+    bytecode: "0x6080604052",
+    contractName: "TestToken",
+    parameters: [{ type: "address", value: "TLPpXqj1z2gqg7Zr3LK1xJ9XJDgSnE4DAS" }],
+    feeLimit: "1500000000",
+    originEnergyLimit: 10_000_000,
+    userFeePercentage: 100,
+    network: "shasta",
+  });
+
+  const request = pendingStore.get(id);
+  assertExists(request);
+  assertEquals(request.type, "deploy_contract");
+  if (request.type === "deploy_contract") {
+    assertEquals(request.bytecode, "0x6080604052");
+    assertEquals(request.contractName, "TestToken");
+    assertEquals(request.abi, abi);
+    assertEquals(request.parameters?.length, 1);
+    assertEquals(request.feeLimit, "1500000000");
+    assertEquals(request.originEnergyLimit, 10_000_000);
+    assertEquals(request.userFeePercentage, 100);
+    assertEquals(request.network, "shasta");
+  }
+
+  pendingStore.complete(id, {
+    success: true,
+    result: JSON.stringify({ txHash: "deploy-tx-hash", contractAddress: "TContractDeployed" }),
+  });
+  await promise;
+});
+
+Deno.test("PendingStore - deploy_contract omits optional fields cleanly", async () => {
+  const { id, promise } = pendingStore.createDeployContractRequest({
+    abi: [],
+    bytecode: "deadbeef",
+  });
+
+  const request = pendingStore.get(id);
+  assertExists(request);
+  if (request.type === "deploy_contract") {
+    assertEquals(request.parameters, undefined);
+    assertEquals(request.feeLimit, undefined);
+    assertEquals(request.network, undefined);
+    assertEquals(request.from, undefined);
+  }
+
+  pendingStore.cancel(id, "cleanup");
+  try {
+    await promise;
+  } catch { /* expected */ }
+});
+
 Deno.test("PendingStore - creates sign_message request", async () => {
   const { id, promise } = pendingStore.createSignMessageRequest({
     message: "Hello TRON",

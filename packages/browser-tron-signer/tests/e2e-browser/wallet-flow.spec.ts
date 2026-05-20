@@ -7,7 +7,7 @@
 
 import { type BrowserContext, expect, test } from "@playwright/test";
 import { createTestRequest, getBaseUrl, getTestResult, startServer, stopServer } from "./fixtures/test-server.mts";
-import { FAKE_TX_ID, getMockProviderScript, TEST_ADDRESS, TEST_NETWORK } from "./fixtures/mock-wallet.mts";
+import { FAKE_CONTRACT_BASE58, FAKE_TX_ID, getMockProviderScript, TEST_ADDRESS, TEST_NETWORK } from "./fixtures/mock-wallet.mts";
 
 test.beforeAll(async () => {
   await startServer();
@@ -284,6 +284,125 @@ test.describe("Trigger Contract", () => {
     const result = await getTestResult(id);
     expect(result?.success).toBe(true);
     expect(result?.result).toBe(FAKE_TX_ID);
+
+    await ctx.close();
+  });
+});
+
+// --- Smart Contract Deployment ---
+
+const SAMPLE_ABI = [
+  {
+    type: "constructor",
+    inputs: [{ name: "_owner", type: "address" }],
+    stateMutability: "nonpayable",
+  },
+  { type: "function", name: "owner", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
+];
+
+const SAMPLE_BYTECODE = "0x6080604052" + "ab".repeat(60);
+
+test.describe("Deploy Contract", () => {
+  test("deploys a contract via createSmartContract and returns txHash + address", async ({ browser }) => {
+    const ctx = await walletContext(browser);
+    const page = await ctx.newPage();
+
+    const { id } = await createTestRequest("deploy_contract", {
+      abi: SAMPLE_ABI,
+      bytecode: SAMPLE_BYTECODE,
+      contractName: "Greeter",
+      parameters: [{ type: "address", value: TEST_ADDRESS }],
+      feeLimit: "1500000000",
+      network: TEST_NETWORK,
+    });
+
+    await page.goto(`${getBaseUrl()}/sign/${id}`);
+    await expect(page.getByRole("heading", { name: "Deploy Contract" })).toBeVisible();
+    await expect(page.locator("#tx-to")).toContainText("Greeter");
+    await expect(page.locator("#tx-bytecode")).toBeVisible();
+    // The bytecode preview includes a byte-count suffix; ensure it reflects our input.
+    const expectedBytes = SAMPLE_BYTECODE.replace(/^0x/, "").length / 2;
+    await expect(page.locator("#tx-bytecode")).toContainText(`${expectedBytes} bytes`);
+    await expect(page.locator("#tx-fee")).toContainText("1500");
+
+    await page.getByRole("button", { name: "Deploy" }).click();
+    await expect(page.getByText("Transaction Sent!")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("#tx-deployed")).toContainText(FAKE_CONTRACT_BASE58);
+
+    const result = await getTestResult(id);
+    expect(result?.success).toBe(true);
+    // The browser stringifies {txHash, contractAddress} as the result payload.
+    const parsed = JSON.parse(result!.result!);
+    expect(parsed.txHash).toBe(FAKE_TX_ID);
+    expect(parsed.contractAddress).toBe(FAKE_CONTRACT_BASE58);
+
+    await ctx.close();
+  });
+
+  test("renders deploy view without parameters when constructor takes no args", async ({ browser }) => {
+    const ctx = await walletContext(browser);
+    const page = await ctx.newPage();
+
+    const { id } = await createTestRequest("deploy_contract", {
+      abi: [{ type: "constructor", inputs: [] }],
+      bytecode: SAMPLE_BYTECODE,
+      contractName: "NoArgs",
+      network: TEST_NETWORK,
+    });
+
+    await page.goto(`${getBaseUrl()}/sign/${id}`);
+    await expect(page.getByRole("heading", { name: "Deploy Contract" })).toBeVisible();
+    await expect(page.locator("#tx-params-row")).toHaveClass(/hidden/);
+    await expect(page.locator("#tx-bytecode-row")).not.toHaveClass(/hidden/);
+
+    await page.getByRole("button", { name: "Deploy" }).click();
+    await expect(page.getByText("Transaction Sent!")).toBeVisible({ timeout: 10000 });
+
+    await ctx.close();
+  });
+
+  test("surfaces TronLink sign rejection during deployment", async ({ browser }) => {
+    const ctx = await walletContext(browser, { rejectSign: true });
+    const page = await ctx.newPage();
+
+    const { id } = await createTestRequest("deploy_contract", {
+      abi: SAMPLE_ABI,
+      bytecode: SAMPLE_BYTECODE,
+      contractName: "RejectMe",
+      network: TEST_NETWORK,
+    });
+
+    await page.goto(`${getBaseUrl()}/sign/${id}`);
+    await page.getByRole("button", { name: "Deploy" }).click();
+    await expect(page.locator("#tx-err")).toBeVisible({ timeout: 10000 });
+
+    const result = await getTestResult(id);
+    expect(result?.success).toBe(false);
+    expect(result?.error).toContain("rejected");
+
+    await ctx.close();
+  });
+
+  test("rejects deployment when user closes popup", async ({ browser }) => {
+    const ctx = await walletContext(browser);
+    const page = await ctx.newPage();
+
+    const { id } = await createTestRequest("deploy_contract", {
+      abi: SAMPLE_ABI,
+      bytecode: SAMPLE_BYTECODE,
+      network: TEST_NETWORK,
+    });
+
+    await page.goto(`${getBaseUrl()}/sign/${id}`);
+    await expect(page.getByRole("heading", { name: "Deploy Contract" })).toBeVisible();
+    await patchWindowClose(page);
+
+    await page.getByRole("button", { name: "Reject" }).click();
+    await page.waitForTimeout(200);
+
+    const result = await getTestResult(id);
+    expect(result?.success).toBe(false);
+    expect(result?.error).toContain("rejected");
 
     await ctx.close();
   });
