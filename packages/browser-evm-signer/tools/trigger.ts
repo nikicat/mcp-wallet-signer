@@ -11,8 +11,55 @@ import { parseArgs } from "node:util";
 import process from "node:process";
 import { readFile } from "node:fs/promises";
 
-import { WalletSigner } from "../src/wallet-signer.ts";
+import open from "open";
+
+import { WalletSigner, type WalletSignerOptions } from "../src/wallet-signer.ts";
 import { CHAINS, getDefaultChainId } from "../src/config.ts";
+
+/**
+ * Build a custom `openBrowser` for the WalletSigner that always prints the URL up-front and
+ * then conditionally opens a browser. `--print` skips the open; `--browser <name>` routes
+ * through `open({app: {name}})` so users can pick the browser TronLink/MetaMask is installed in.
+ *
+ * `name` accepts the cross-platform aliases the `open` package recognises (chrome, firefox, edge,
+ * safari) or an absolute path to a browser binary.
+ */
+function buildOpenBrowser(values: { print?: boolean; browser?: string }): WalletSignerOptions["openBrowser"] {
+  const printUrl = (url: string) => console.log(`Approval URL: ${url}`);
+
+  if (values.print) {
+    return (url) => {
+      printUrl(url);
+      console.log("(--print: not opening a browser; copy the URL above)");
+    };
+  }
+
+  if (values.browser) {
+    const name = values.browser;
+    return async (url) => {
+      printUrl(url);
+      try {
+        await open(url, { app: { name } });
+      } catch (err) {
+        console.error(`Failed to launch ${name}: ${err instanceof Error ? err.message : err}`);
+        console.error("Open the URL above manually.");
+      }
+    };
+  }
+
+  return async (url) => {
+    printUrl(url);
+    try {
+      await open(url);
+    } catch (err) {
+      console.error(`Failed to open browser: ${err instanceof Error ? err.message : err}`);
+      console.error("Open the URL above manually.");
+    }
+  };
+}
+
+const BROWSER_FLAGS_USAGE = "  --browser <name>             Override browser (chrome|firefox|edge|safari|/path)\n" +
+  "  --print                      Just print the URL, don't open any browser";
 
 const USAGE = `Usage: trigger <subcommand> [flags]
 
@@ -41,21 +88,30 @@ async function runConnect(rest: string[]): Promise<void> {
     options: {
       chain: { type: "string" },
       address: { type: "string" },
+      browser: { type: "string" },
+      print: { type: "boolean" },
       help: { type: "boolean" },
     },
     allowPositionals: false,
   });
 
   if (values.help) {
-    printHelp("connect", "  --chain <id>       Chain ID (default from env or 1)\n  --address <0x...>  Required wallet address");
+    printHelp(
+      "connect",
+      "  --chain <id>                 Chain ID (default from env or 1)\n" +
+        "  --address <0x...>            Required wallet address\n" +
+        BROWSER_FLAGS_USAGE,
+    );
     return;
   }
 
   const chainId = values.chain ? parseInt(values.chain, 10) : undefined;
-  const signer = new WalletSigner({ defaultChainId: chainId ?? getDefaultChainId() });
+  const signer = new WalletSigner({
+    defaultChainId: chainId ?? getDefaultChainId(),
+    openBrowser: buildOpenBrowser(values),
+  });
   try {
-    const { address, approvalUrl } = await signer.connectWallet({ chainId, address: values.address });
-    console.log(`Approval URL: ${approvalUrl}`);
+    const { address } = await signer.connectWallet({ chainId, address: values.address });
     console.log(`Connected:    ${address}`);
   } finally {
     await signer.shutdown();
@@ -74,6 +130,8 @@ async function runSendTransaction(rest: string[]): Promise<void> {
       gasLimit: { type: "string" },
       maxFeePerGas: { type: "string" },
       maxPriorityFeePerGas: { type: "string" },
+      browser: { type: "string" },
+      print: { type: "boolean" },
       help: { type: "boolean" },
     },
     allowPositionals: false,
@@ -89,7 +147,8 @@ async function runSendTransaction(rest: string[]): Promise<void> {
         "  --chain <id>                 Chain ID\n" +
         "  --gasLimit <n>               Gas limit\n" +
         "  --maxFeePerGas <wei>         EIP-1559 max fee\n" +
-        "  --maxPriorityFeePerGas <wei> EIP-1559 priority fee",
+        "  --maxPriorityFeePerGas <wei> EIP-1559 priority fee\n" +
+        BROWSER_FLAGS_USAGE,
     );
     return;
   }
@@ -97,9 +156,12 @@ async function runSendTransaction(rest: string[]): Promise<void> {
   if (!values.to) die("--to is required");
 
   const chainId = values.chain ? parseInt(values.chain, 10) : undefined;
-  const signer = new WalletSigner({ defaultChainId: chainId ?? getDefaultChainId() });
+  const signer = new WalletSigner({
+    defaultChainId: chainId ?? getDefaultChainId(),
+    openBrowser: buildOpenBrowser(values),
+  });
   try {
-    const { txHash, approvalUrl } = await signer.sendTransaction({
+    const { txHash } = await signer.sendTransaction({
       to: values.to,
       from: values.from,
       value: values.value,
@@ -109,7 +171,6 @@ async function runSendTransaction(rest: string[]): Promise<void> {
       maxFeePerGas: values.maxFeePerGas,
       maxPriorityFeePerGas: values.maxPriorityFeePerGas,
     });
-    console.log(`Approval URL: ${approvalUrl}`);
     console.log(`Tx hash:      ${txHash}`);
     const chain = CHAINS[chainId ?? signer.defaultChainId];
     if (chain?.blockExplorer) console.log(`Explorer:     ${chain.blockExplorer}/tx/${txHash}`);
@@ -125,6 +186,8 @@ async function runSignMessage(rest: string[]): Promise<void> {
       message: { type: "string" },
       address: { type: "string" },
       chain: { type: "string" },
+      browser: { type: "string" },
+      print: { type: "boolean" },
       help: { type: "boolean" },
     },
     allowPositionals: false,
@@ -133,9 +196,10 @@ async function runSignMessage(rest: string[]): Promise<void> {
   if (values.help) {
     printHelp(
       "sign-message",
-      "  --message <str>    Message to sign (required)\n" +
-        "  --address <0x...>  Address to sign with (defaults to connected)\n" +
-        "  --chain <id>       Chain ID",
+      "  --message <str>              Message to sign (required)\n" +
+        "  --address <0x...>            Address to sign with (defaults to connected)\n" +
+        "  --chain <id>                 Chain ID\n" +
+        BROWSER_FLAGS_USAGE,
     );
     return;
   }
@@ -143,14 +207,16 @@ async function runSignMessage(rest: string[]): Promise<void> {
   if (!values.message) die("--message is required");
 
   const chainId = values.chain ? parseInt(values.chain, 10) : undefined;
-  const signer = new WalletSigner({ defaultChainId: chainId ?? getDefaultChainId() });
+  const signer = new WalletSigner({
+    defaultChainId: chainId ?? getDefaultChainId(),
+    openBrowser: buildOpenBrowser(values),
+  });
   try {
-    const { signature, approvalUrl } = await signer.signMessage({
+    const { signature } = await signer.signMessage({
       message: values.message,
       address: values.address,
       chainId,
     });
-    console.log(`Approval URL: ${approvalUrl}`);
     console.log(`Signature:    ${signature}`);
   } finally {
     await signer.shutdown();
@@ -164,6 +230,8 @@ async function runSignTypedData(rest: string[]): Promise<void> {
       json: { type: "string" },
       address: { type: "string" },
       chain: { type: "string" },
+      browser: { type: "string" },
+      print: { type: "boolean" },
       help: { type: "boolean" },
     },
     allowPositionals: false,
@@ -172,9 +240,10 @@ async function runSignTypedData(rest: string[]): Promise<void> {
   if (values.help) {
     printHelp(
       "sign-typed-data",
-      "  --json <file>      Path to JSON with {domain, types, primaryType, message} (required)\n" +
-        "  --address <0x...>  Address to sign with\n" +
-        "  --chain <id>       Chain ID",
+      "  --json <file>                Path to JSON with {domain, types, primaryType, message} (required)\n" +
+        "  --address <0x...>            Address to sign with\n" +
+        "  --chain <id>                 Chain ID\n" +
+        BROWSER_FLAGS_USAGE,
     );
     return;
   }
@@ -189,14 +258,16 @@ async function runSignTypedData(rest: string[]): Promise<void> {
   };
 
   const chainId = values.chain ? parseInt(values.chain, 10) : undefined;
-  const signer = new WalletSigner({ defaultChainId: chainId ?? getDefaultChainId() });
+  const signer = new WalletSigner({
+    defaultChainId: chainId ?? getDefaultChainId(),
+    openBrowser: buildOpenBrowser(values),
+  });
   try {
-    const { signature, approvalUrl } = await signer.signTypedData({
+    const { signature } = await signer.signTypedData({
       ...parsed,
       address: values.address,
       chainId,
     });
-    console.log(`Approval URL: ${approvalUrl}`);
     console.log(`Signature:    ${signature}`);
   } finally {
     await signer.shutdown();

@@ -173,6 +173,21 @@ deno task cli tron trigger-contract --contract T... \
 deno task cli tron get-balance --address T...   # no browser
 ```
 
+The approval URL is always printed up-front so you can pick where to open it.
+
+```bash
+# Pick a specific browser (the one that has TronLink / MetaMask installed)
+deno task cli tron connect --browser chrome
+deno task cli tron connect --browser firefox
+deno task cli tron connect --browser /usr/bin/brave-browser   # or any path
+
+# Print the URL only — don't auto-open anything. Open it manually wherever you like
+deno task cli tron connect --print
+deno task cli evm  send-transaction --to 0x... --value 1000 --print
+```
+
+`--browser <name>` accepts `chrome`, `firefox`, `edge`, `safari`, or a binary path. Useful when your system default doesn't have the wallet extension installed.
+
 Per-package `deno task trigger ...` works too if you're already inside `packages/browser-evm-signer/` or `packages/browser-tron-signer/`.
 
 ### Project Structure

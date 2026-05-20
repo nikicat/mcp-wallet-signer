@@ -11,9 +11,53 @@ import { parseArgs } from "node:util";
 import process from "node:process";
 import { readFile } from "node:fs/promises";
 
-import { WalletSigner } from "../src/wallet-signer.ts";
+import open from "open";
+
+import { WalletSigner, type WalletSignerOptions } from "../src/wallet-signer.ts";
 import { getDefaultNetwork, NETWORKS } from "../src/config.ts";
 import type { TronNetwork } from "../src/types.ts";
+
+/**
+ * Build a custom `openBrowser` for the WalletSigner that always prints the URL up-front and
+ * then conditionally opens a browser. `--print` skips the open; `--browser <name>` routes
+ * through `open({app: {name}})` so users can pick the browser TronLink is installed in.
+ */
+function buildOpenBrowser(values: { print?: boolean; browser?: string }): WalletSignerOptions["openBrowser"] {
+  const printUrl = (url: string) => console.log(`Approval URL: ${url}`);
+
+  if (values.print) {
+    return (url) => {
+      printUrl(url);
+      console.log("(--print: not opening a browser; copy the URL above)");
+    };
+  }
+
+  if (values.browser) {
+    const name = values.browser;
+    return async (url) => {
+      printUrl(url);
+      try {
+        await open(url, { app: { name } });
+      } catch (err) {
+        console.error(`Failed to launch ${name}: ${err instanceof Error ? err.message : err}`);
+        console.error("Open the URL above manually.");
+      }
+    };
+  }
+
+  return async (url) => {
+    printUrl(url);
+    try {
+      await open(url);
+    } catch (err) {
+      console.error(`Failed to open browser: ${err instanceof Error ? err.message : err}`);
+      console.error("Open the URL above manually.");
+    }
+  };
+}
+
+const BROWSER_FLAGS_USAGE = "  --browser <name>                 Override browser (chrome|firefox|edge|safari|/path)\n" +
+  "  --print                          Just print the URL, don't open any browser";
 
 const USAGE = `Usage: trigger <subcommand> [flags]
 
@@ -51,6 +95,8 @@ async function runConnect(rest: string[]): Promise<void> {
     options: {
       network: { type: "string" },
       address: { type: "string" },
+      browser: { type: "string" },
+      print: { type: "boolean" },
       help: { type: "boolean" },
     },
     allowPositionals: false,
@@ -60,16 +106,19 @@ async function runConnect(rest: string[]): Promise<void> {
     printHelp(
       "connect",
       "  --network <mainnet|shasta|nile>  Network (default: from env or mainnet)\n" +
-        "  --address <T...>                 Required wallet address",
+        "  --address <T...>                 Required wallet address\n" +
+        BROWSER_FLAGS_USAGE,
     );
     return;
   }
 
   const network = parseNetwork(values.network);
-  const signer = new WalletSigner({ defaultNetwork: network ?? getDefaultNetwork() });
+  const signer = new WalletSigner({
+    defaultNetwork: network ?? getDefaultNetwork(),
+    openBrowser: buildOpenBrowser(values),
+  });
   try {
-    const { address, approvalUrl } = await signer.connectWallet({ network, address: values.address });
-    console.log(`Approval URL: ${approvalUrl}`);
+    const { address } = await signer.connectWallet({ network, address: values.address });
     console.log(`Connected:    ${address}`);
   } finally {
     await signer.shutdown();
@@ -85,6 +134,8 @@ async function runSendTrx(rest: string[]): Promise<void> {
       amount: { type: "string" },
       data: { type: "string" },
       network: { type: "string" },
+      browser: { type: "string" },
+      print: { type: "boolean" },
       help: { type: "boolean" },
     },
     allowPositionals: false,
@@ -97,7 +148,8 @@ async function runSendTrx(rest: string[]): Promise<void> {
         "  --amount <sun>                   Amount in SUN (1 TRX = 1_000_000 SUN) (required)\n" +
         "  --from <T...>                    Expected from-address\n" +
         "  --data <hex>                     Optional memo/data field\n" +
-        "  --network <mainnet|shasta|nile>  Network",
+        "  --network <mainnet|shasta|nile>  Network\n" +
+        BROWSER_FLAGS_USAGE,
     );
     return;
   }
@@ -106,16 +158,18 @@ async function runSendTrx(rest: string[]): Promise<void> {
   if (!values.amount) die("--amount is required");
 
   const network = parseNetwork(values.network);
-  const signer = new WalletSigner({ defaultNetwork: network ?? getDefaultNetwork() });
+  const signer = new WalletSigner({
+    defaultNetwork: network ?? getDefaultNetwork(),
+    openBrowser: buildOpenBrowser(values),
+  });
   try {
-    const { txHash, approvalUrl } = await signer.sendTransaction({
+    const { txHash } = await signer.sendTransaction({
       to: values.to,
       from: values.from,
       amount: values.amount,
       data: values.data,
       network,
     });
-    console.log(`Approval URL: ${approvalUrl}`);
     console.log(`Tx ID:        ${txHash}`);
     const cfg = NETWORKS[network ?? signer.defaultNetwork];
     if (cfg?.blockExplorer) console.log(`Explorer:     ${cfg.blockExplorer}/#/transaction/${txHash}`);
@@ -135,6 +189,8 @@ async function runTriggerContract(rest: string[]): Promise<void> {
       feeLimit: { type: "string" },
       callValue: { type: "string" },
       network: { type: "string" },
+      browser: { type: "string" },
+      print: { type: "boolean" },
       help: { type: "boolean" },
     },
     allowPositionals: false,
@@ -149,7 +205,8 @@ async function runTriggerContract(rest: string[]): Promise<void> {
         "  --from <T...>                    Expected from-address\n" +
         "  --feeLimit <sun>                 Max energy fee in SUN\n" +
         "  --callValue <sun>                TRX to send with the call, in SUN\n" +
-        "  --network <mainnet|shasta|nile>  Network",
+        "  --network <mainnet|shasta|nile>  Network\n" +
+        BROWSER_FLAGS_USAGE,
     );
     return;
   }
@@ -160,9 +217,12 @@ async function runTriggerContract(rest: string[]): Promise<void> {
   const parameters = values.params ? (JSON.parse(values.params) as Array<{ type: string; value: unknown }>) : undefined;
 
   const network = parseNetwork(values.network);
-  const signer = new WalletSigner({ defaultNetwork: network ?? getDefaultNetwork() });
+  const signer = new WalletSigner({
+    defaultNetwork: network ?? getDefaultNetwork(),
+    openBrowser: buildOpenBrowser(values),
+  });
   try {
-    const { txHash, approvalUrl } = await signer.triggerContract({
+    const { txHash } = await signer.triggerContract({
       contractAddress: values.contract,
       functionSelector: values.selector,
       parameters,
@@ -171,7 +231,6 @@ async function runTriggerContract(rest: string[]): Promise<void> {
       callValue: values.callValue,
       network,
     });
-    console.log(`Approval URL: ${approvalUrl}`);
     console.log(`Tx ID:        ${txHash}`);
     const cfg = NETWORKS[network ?? signer.defaultNetwork];
     if (cfg?.blockExplorer) console.log(`Explorer:     ${cfg.blockExplorer}/#/transaction/${txHash}`);
@@ -187,6 +246,8 @@ async function runSignMessage(rest: string[]): Promise<void> {
       message: { type: "string" },
       address: { type: "string" },
       network: { type: "string" },
+      browser: { type: "string" },
+      print: { type: "boolean" },
       help: { type: "boolean" },
     },
     allowPositionals: false,
@@ -197,7 +258,8 @@ async function runSignMessage(rest: string[]): Promise<void> {
       "sign-message",
       "  --message <str>                  Message to sign (required)\n" +
         "  --address <T...>                 Address to sign with\n" +
-        "  --network <mainnet|shasta|nile>  Network",
+        "  --network <mainnet|shasta|nile>  Network\n" +
+        BROWSER_FLAGS_USAGE,
     );
     return;
   }
@@ -205,14 +267,16 @@ async function runSignMessage(rest: string[]): Promise<void> {
   if (!values.message) die("--message is required");
 
   const network = parseNetwork(values.network);
-  const signer = new WalletSigner({ defaultNetwork: network ?? getDefaultNetwork() });
+  const signer = new WalletSigner({
+    defaultNetwork: network ?? getDefaultNetwork(),
+    openBrowser: buildOpenBrowser(values),
+  });
   try {
-    const { signature, approvalUrl } = await signer.signMessage({
+    const { signature } = await signer.signMessage({
       message: values.message,
       address: values.address,
       network,
     });
-    console.log(`Approval URL: ${approvalUrl}`);
     console.log(`Signature:    ${signature}`);
   } finally {
     await signer.shutdown();
@@ -226,6 +290,8 @@ async function runSignTypedData(rest: string[]): Promise<void> {
       json: { type: "string" },
       address: { type: "string" },
       network: { type: "string" },
+      browser: { type: "string" },
+      print: { type: "boolean" },
       help: { type: "boolean" },
     },
     allowPositionals: false,
@@ -236,7 +302,8 @@ async function runSignTypedData(rest: string[]): Promise<void> {
       "sign-typed-data",
       "  --json <file>                    Path to JSON with {domain, types, primaryType, message} (required)\n" +
         "  --address <T...>                 Address to sign with\n" +
-        "  --network <mainnet|shasta|nile>  Network",
+        "  --network <mainnet|shasta|nile>  Network\n" +
+        BROWSER_FLAGS_USAGE,
     );
     return;
   }
@@ -251,14 +318,16 @@ async function runSignTypedData(rest: string[]): Promise<void> {
   };
 
   const network = parseNetwork(values.network);
-  const signer = new WalletSigner({ defaultNetwork: network ?? getDefaultNetwork() });
+  const signer = new WalletSigner({
+    defaultNetwork: network ?? getDefaultNetwork(),
+    openBrowser: buildOpenBrowser(values),
+  });
   try {
-    const { signature, approvalUrl } = await signer.signTypedData({
+    const { signature } = await signer.signTypedData({
       ...parsed,
       address: values.address,
       network,
     });
-    console.log(`Approval URL: ${approvalUrl}`);
     console.log(`Signature:    ${signature}`);
   } finally {
     await signer.shutdown();
