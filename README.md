@@ -7,9 +7,9 @@
 **Your private keys never leave your browser.** Every transaction requires explicit user approval in your wallet.
 
 Most blockchain MCPs require you to paste a private key into a config file — giving the AI agent full, unsupervised access to your
-funds. MCP Wallet Signer takes a different approach: it routes every transaction to your actual browser wallet (MetaMask, Rabby,
-etc.) via [EIP-6963](https://eips.ethereum.org/EIPS/eip-6963), so you review and approve each action just like any other dapp
-interaction. No keys in config files, no risk of silent transactions.
+funds. MCP Wallet Signer takes a different approach: it routes every transaction to your actual browser wallet — EVM wallets
+(MetaMask, Rabby, …) via [EIP-6963](https://eips.ethereum.org/EIPS/eip-6963), and TRON via TronLink — so you review and approve
+each action just like any other dapp interaction. No keys in config files, no risk of silent transactions.
 
 ### Compatible With
 
@@ -25,8 +25,10 @@ Works with any MCP-compatible client via stdio transport.
 ### Claude Code CLI
 
 ```bash
-claude mcp add evm-wallet -- npx -y mcp-wallet-signer
+claude mcp add wallet-signer -- npx -y mcp-wallet-signer
 ```
+
+(The name `wallet-signer` is just the MCP server identifier — pick anything you like. Legacy `evm-wallet` still works for users who installed before TRON support landed.)
 
 ### Claude Desktop
 
@@ -35,7 +37,7 @@ Add to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "evm-wallet": {
+    "wallet-signer": {
       "command": "npx",
       "args": ["-y", "mcp-wallet-signer"]
     }
@@ -76,10 +78,12 @@ bunx mcp-wallet-signer
 
 ## How It Works
 
-1. Agent calls an MCP tool (e.g., `send_transaction`)
-2. Server opens browser to a local signing page
-3. User connects wallet and approves the action
+1. Agent calls an MCP tool (e.g., `send_transaction` or `tron_send_transaction`)
+2. Server opens browser to a local signing page (EVM and TRON each run their own HTTP bridge on a separate port)
+3. User connects wallet and approves the action — in MetaMask/Rabby/etc. for EVM, in TronLink for TRON
 4. Result (address, tx hash, signature) returned to agent
+
+Screenshots below show the EVM approval UI; the TRON UI mirrors the same card layout with TronLink-specific copy and TRX denomination.
 
 | Connect Wallet | Send Transaction | Sign Message |
 |:-:|:-:|:-:|
@@ -193,6 +197,9 @@ Per-package `deno task trigger ...` works too if you're already inside `packages
 ### Project Structure
 
 ```
+tools/
+└── signer-cli.ts            # Root dispatcher → per-package trigger CLIs
+
 packages/
 ├── wallet-signer-core/      # Chain-agnostic primitives (npm: wallet-signer-core)
 │   ├── src/                  # PendingStore, HTTP bridge, errors, browser opener
@@ -201,18 +208,22 @@ packages/
 │
 ├── browser-evm-signer/      # EVM signing library (npm: browser-evm-signer)
 │   ├── src/                  # EVM types, viem transport, EIP-6963 approval UI
-│   ├── tests/                # Unit, e2e, and browser tests
+│   ├── tools/trigger.ts      # Manual-trigger CLI
+│   ├── tests/                # Unit, e2e (HTTP), and e2e-browser (Playwright) tests
 │   └── scripts/build-npm.ts
 │
 ├── browser-tron-signer/     # TRON signing library (npm: browser-tron-signer)
 │   ├── src/                  # TRON types, TronLink approval UI, TronGrid balance fetch
-│   ├── tests/                # Unit tests
+│   ├── tools/trigger.ts      # Manual-trigger CLI
+│   ├── tests/                # Unit, e2e (HTTP), and e2e-browser (Playwright) tests
 │   └── scripts/build-npm.ts
 │
 └── mcp-wallet-signer/       # MCP server layer (npm: mcp-wallet-signer)
     ├── src/                  # MCP tool definitions + CLI entry
     └── scripts/build-npm.ts
 ```
+
+A Deno [workspace](https://docs.deno.com/runtime/fundamentals/workspaces/) declaration at the root makes each member's import map visible to root-level scripts (notably `tools/signer-cli.ts` resolving `wallet-signer-core`).
 
 All packages are built with [dnt](https://github.com/denoland/dnt) and use `node:` builtins (no Deno-specific APIs) so the npm bundles run under Node.js.
 

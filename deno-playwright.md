@@ -28,17 +28,39 @@ resolve: {
 ## Build Caching Gotcha
 The `cp -r dist ../dist/web` task doesn't clean the destination first. Stale asset files persist. Always `rm -rf` the destination before copying, or verify the served HTML references the current bundle hash.
 
+## Pin Both `imports` AND the Runner Version
+A common trap: the nested `e2e-browser/deno.json` pins `@playwright/test` to a specific version in `imports`, but the `test` task still invokes `npm:@playwright/test@latest/cli`. The two can drift — when npm publishes a new minor (e.g. 1.59 → 1.60) the CLI starts looking for a chromium revision that wasn't installed by `playwright:install` (which is pinned). The result is "Executable doesn't exist at .../chrome-headless-shell" mid-test.
+
+**Fix**: pin the runner version in the task too:
+```json
+"test": "deno task prepare && deno run -A npm:@playwright/test@1.58.2/cli test"
+```
+Same version everywhere — `imports`, the `test` task, and `playwright:install`.
+
+## Nested deno.json Doesn't Inherit Parent Imports
+When the e2e-browser directory has its own `deno.json` and the spec/fixtures import from `../../../src/foo.ts` which itself imports a workspace alias like `wallet-signer-core`, Deno resolves the config from the nested directory and **does not** walk up to the parent's import map. Imports defined only at the parent level fail to resolve with `Import "X" not a dependency and not in import map`.
+
+**Fix**: duplicate the workspace import in the nested `deno.json`:
+```json
+"imports": {
+  "@playwright/test": "npm:@playwright/test@1.58.2",
+  "wallet-signer-core": "../../../wallet-signer-core/src/mod.ts"
+}
+```
+
+## Workspace + nodeModulesDir
+If you declare a Deno `workspace` at the repo root, `nodeModulesDir` must live in the root config only — member `deno.json` files emit a warning if they set it. Move all `"nodeModulesDir": "auto"` lines to the root.
+
 ## Working deno.json Pattern
 ```json
 {
   "tasks": {
     "prepare": "deno cache --node-modules-dir playwright.config.ts spec-file.spec.ts",
-    "test": "deno task prepare && deno run -A npm:@playwright/test@latest/cli test"
+    "test": "deno task prepare && deno run -A npm:@playwright/test@1.58.2/cli test"
   },
   "imports": {
     "@playwright/test": "npm:@playwright/test@1.58.2"
-  },
-  "nodeModulesDir": "auto"
+  }
 }
 ```
 

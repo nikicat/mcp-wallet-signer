@@ -7,6 +7,8 @@
 
 Most blockchain libraries require you to paste a private key or mnemonic into your app. `browser-evm-signer` takes a different approach: it opens your actual browser wallet (MetaMask, Rabby, etc.) for every signing action. You review and approve each transaction just like any dapp interaction.
 
+Sister package for TRON: [`browser-tron-signer`](https://www.npmjs.com/package/browser-tron-signer). Both build on the shared [`wallet-signer-core`](https://www.npmjs.com/package/wallet-signer-core) substrate.
+
 | Connect Wallet | Send Transaction | Sign Message |
 |:-:|:-:|:-:|
 | ![Connect Wallet](https://raw.githubusercontent.com/nikicat/mcp-wallet-signer/master/packages/browser-evm-signer/docs/screenshots/connect-wallet.png) | ![Send Transaction](https://raw.githubusercontent.com/nikicat/mcp-wallet-signer/master/packages/browser-evm-signer/docs/screenshots/send-transaction.png) | ![Sign Message](https://raw.githubusercontent.com/nikicat/mcp-wallet-signer/master/packages/browser-evm-signer/docs/screenshots/sign-message.png) |
@@ -24,6 +26,8 @@ Most blockchain libraries require you to paste a private key or mnemonic into yo
 ```bash
 npm install browser-evm-signer viem
 ```
+
+`wallet-signer-core` is pulled in transitively — no separate install needed. `viem` is a peer dep so consumers share a single copy.
 
 ## Quick Start
 
@@ -135,6 +139,23 @@ Creates a viem custom transport. Wallet methods go through the browser; read met
 | Base | 8453 |
 | Avalanche | 43114 |
 | BNB Smart Chain | 56 |
+
+## Error Handling
+
+`WalletSigner` rejects with a `WrongWalletAddressError` (re-exported from `wallet-signer-core`) when the user connects an account that doesn't match the `from` / `address` you required. Use `findWrongWalletAddressError(err)` to walk through wrapped causes (viem typically wraps signer errors):
+
+```ts
+import { findWrongWalletAddressError } from "browser-evm-signer";
+
+try {
+  await signer.sendTransaction({ from: "0xRequired...", to: "0x...", value: "1" });
+} catch (err) {
+  if (findWrongWalletAddressError(err)) {
+    // user connected the wrong account — clear cached address, prompt again
+  }
+  throw err;
+}
+```
 
 ## License
 
