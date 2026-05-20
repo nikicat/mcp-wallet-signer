@@ -28,10 +28,16 @@ jobs:
       - name: Build both packages
         run: deno task build:all
 
+      # Playwright pin matches between both chain packages (1.58.2), so the chromium
+      # downloaded here is reused by the TRON browser tests below.
       - name: Install Playwright Chromium
         working-directory: packages/browser-evm-signer
         run: deno task playwright:install
 
-      - name: Browser tests
+      - name: EVM browser tests
         working-directory: packages/browser-evm-signer
+        run: deno task test:browser
+
+      - name: TRON browser tests
+        working-directory: packages/browser-tron-signer
         run: deno task test:browser

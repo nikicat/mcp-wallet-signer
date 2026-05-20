@@ -22,6 +22,8 @@ jobs:
           case "$PACKAGE" in
             mcp-wallet-signer)    DIR="packages/mcp-wallet-signer"; JSR="false" ;;
             browser-evm-signer)   DIR="packages/browser-evm-signer"; JSR="true" ;;
+            browser-tron-signer)  DIR="packages/browser-tron-signer"; JSR="true" ;;
+            wallet-signer-core)   DIR="packages/wallet-signer-core"; JSR="true" ;;
             *) echo "::error::Unknown package '$PACKAGE' in tag '$TAG'"; exit 1 ;;
           esac
           echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
