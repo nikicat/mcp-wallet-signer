@@ -35,7 +35,21 @@ New npm packages need a one-time manual bootstrap before the GitHub-Actions OIDC
 2. From the user's shell: `cd packages/<dir>/npm && npm login && npm publish --provenance --access public` (interactive — user runs)
 3. JSR (if applicable): `cd packages/<dir> && deno publish --allow-dirty`
 4. Tag the commit and push, but **skip creating a GitHub release** for this initial version — the publish workflow would otherwise fire on `release: created` and fail because the version is already on the registry.
-5. The next version bump (≥ 0.x.y+1) goes through the normal workflow flow below.
+5. **Authorize the GitHub workflow on each registry — do this immediately, even though the next release may be weeks away:**
+   - **npm Trusted Publisher** (https://www.npmjs.com/package/&lt;npm-name&gt;/access → "Trusted Publishers"): add provider `GitHub Actions`, owner `nikicat`, repo `mcp-wallet-signer`, workflow `publish.yml`, environment blank.
+     Without this, the workflow's `npm publish --provenance` fails with `ENEEDAUTH` — `secrets.NPM_TOKEN` is unset in this repo on purpose; the workflow relies entirely on OIDC.
+   - **JSR linked repo** (https://jsr.io/&lt;jsr-name&gt;/settings → "GitHub repository"): set to `nikicat/mcp-wallet-signer`.
+     Without this, `deno publish --allow-dirty` fails with `actorNotAuthorized`. Authorization is per-package — granting it for one package does **not** carry over to a sibling under the same scope.
+6. The next version bump (≥ 0.x.y+1) goes through the normal workflow flow below.
+
+### Bumping the chain-pkg dep range in `mcp-wallet-signer`
+
+The MCP build remaps each chain-pkg `mod.ts` import to an npm dependency with a fixed version range — see `packages/mcp-wallet-signer/scripts/build-npm.ts`, in `mappings`. For pre-1.0 versions, **`^0.1.0` only matches `>=0.1.0 <0.2.0`**, so a chain minor bump (0.1.x → 0.2.0) leaves the MCP package pinned to the old major-zero band and `npx mcp-wallet-signer` keeps installing the stale version.
+
+When publishing `mcp-wallet-signer` after a chain package's minor bump, also bump the range to the new band (e.g. `^0.1.0` → `^0.2.0`) and verify the built `npm/package.json` carries it before tagging:
+```
+grep -E '"browser-(evm|tron)-signer"' packages/mcp-wallet-signer/npm/package.json
+```
 
 ## Tag format
 
@@ -123,12 +137,21 @@ This triggers the `publish.yml` GitHub Actions workflow which parses the package
 
 Get the run ID from `gh run list --workflow=publish.yml --limit=1` and watch it with `gh run watch <run-id>`. Use a timeout of 5 minutes.
 
-If the workflow fails, show the logs with `gh run view <run-id> --log-failed` and stop.
+If the workflow fails:
+1. Show the logs with `gh run view <run-id> --log-failed`.
+2. Common failure modes — diagnose before retrying:
+   - `npm error code ENEEDAUTH` → trusted publisher missing on npm for this package. See "First publish of a new package" step 5 — same fix applies to a package that was bootstrapped manually but never wired up for CI.
+   - `error: ... actorNotAuthorized` from `deno publish` → JSR repo authorization missing for this package.
+3. Once the underlying auth/setup is fixed (ask the user to do this), resume the same run instead of cutting a new tag: `gh run rerun <run-id> --failed`. The GitHub release is already created, so a fresh push won't re-trigger anything.
 
 ### 8. Verify published packages
 
 Check all supported registries for the package:
 
 - **npm**: Run `npm view <npm-name> version` and confirm the output matches `<new-version>`.
-- **JSR** (if package supports it): Run `deno info jsr:<jsr-name>@<new-version>` to verify.
+- **JSR** (if package supports it): Do **not** use `deno info jsr:<jsr-name>@<new-version>` from inside the workspace — Deno resolves the JSR specifier to the local workspace member and reports the in-tree source, so the check always "passes" regardless of what's actually on the registry. Hit JSR's meta API directly instead:
+  ```
+  curl -s "https://jsr.io/<jsr-name>/meta.json" | python3 -c "import sys, json; print(list(json.load(sys.stdin).get('versions', {}).keys()))"
+  ```
+  Confirm `<new-version>` appears in the list.
 - If any check fails, warn the user.
