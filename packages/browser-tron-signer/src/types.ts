@@ -35,6 +35,7 @@ export type RequestType =
   | "connect"
   | "send_transaction"
   | "trigger_contract"
+  | "deploy_contract"
   | "sign_message"
   | "sign_typed_data";
 
@@ -73,11 +74,38 @@ export interface TriggerContractRequest extends BaseRequest {
   /** Function signature, e.g. `transfer(address,uint256)`. */
   functionSelector: string;
   /** Encoded ABI parameter list — see TronWeb docs for `parameter` array shape. */
-  parameters?: Array<{ type: string; value: unknown }>;
+  parameters?: ReadonlyArray<{ type: string; value: unknown }>;
   /** Max energy fee in SUN. Defaults to 150_000_000 (150 TRX) in the UI if omitted. */
   feeLimit?: string;
   /** TRX value to send alongside the call, in SUN. */
   callValue?: string;
+}
+
+/**
+ * Smart-contract deployment via `tronWeb.transactionBuilder.createSmartContract`.
+ * The browser side builds, signs, and broadcasts using the connected wallet's tronWeb instance.
+ */
+export interface DeployContractRequest extends BaseRequest {
+  type: "deploy_contract";
+  network?: TronNetwork;
+  /** Expected `from` (owner) address. UI rejects on connected-wallet mismatch when set. */
+  from?: string;
+  /** Human-readable contract name (shown in the approval UI). */
+  contractName?: string;
+  /** Contract ABI — passed straight to `createSmartContract`. */
+  abi: readonly unknown[];
+  /** Compiled bytecode (hex, with or without `0x` prefix). */
+  bytecode: string;
+  /** Constructor parameters in TronWeb's `Array<{type, value}>` shape. */
+  parameters?: ReadonlyArray<{ type: string; value: unknown }>;
+  /** Max energy fee in SUN. Defaults to 1_500_000_000 (1500 TRX) in the UI if omitted. */
+  feeLimit?: string;
+  /** TRX value (in SUN) to send to the constructor. */
+  callValue?: string;
+  /** Origin energy limit (advanced). Defaults to 10_000_000 in the UI if omitted. */
+  originEnergyLimit?: number;
+  /** Percentage of fee user pays (0-100). Defaults to 100 in the UI if omitted. */
+  userFeePercentage?: number;
 }
 
 export interface SignMessageRequest extends BaseRequest {
@@ -118,5 +146,6 @@ export type TronPendingRequest =
   | ConnectRequest
   | SendTransactionRequest
   | TriggerContractRequest
+  | DeployContractRequest
   | SignMessageRequest
   | SignTypedDataRequest;

@@ -58,6 +58,23 @@ function handleTestRoutes(ctx: ExtraApiContext<TronPendingRequest>): Response | 
         promise = r.promise;
         break;
       }
+      case "deploy_contract": {
+        const r = tronStore.createDeployContractRequest({
+          abi: data.abi as Parameters<typeof tronStore.createDeployContractRequest>[0]["abi"],
+          bytecode: data.bytecode as string,
+          contractName: data.contractName as string | undefined,
+          parameters: data.parameters as Parameters<typeof tronStore.createDeployContractRequest>[0]["parameters"],
+          from: data.from as string | undefined,
+          feeLimit: data.feeLimit as string | undefined,
+          callValue: data.callValue as string | undefined,
+          originEnergyLimit: data.originEnergyLimit as number | undefined,
+          userFeePercentage: data.userFeePercentage as number | undefined,
+          network: data.network as Parameters<typeof tronStore.createDeployContractRequest>[0]["network"],
+        });
+        id = r.id;
+        promise = r.promise;
+        break;
+      }
       case "sign_message": {
         const r = tronStore.createSignMessageRequest({
           message: data.message as string,

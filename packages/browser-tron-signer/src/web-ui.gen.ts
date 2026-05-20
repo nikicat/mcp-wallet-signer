@@ -479,6 +479,10 @@ export function getIndexHtml(): string {
               <span class="label">Params</span>
               <span id="tx-params" class="value value-mono"></span>
             </div>
+            <div id="tx-bytecode-row" class="detail-row hidden">
+              <span class="label">Bytecode</span>
+              <span id="tx-bytecode" class="value value-mono"></span>
+            </div>
             <div id="tx-fee-row" class="detail-row hidden">
               <span class="label">Fee Limit</span>
               <span id="tx-fee" class="value"></span>
@@ -486,6 +490,10 @@ export function getIndexHtml(): string {
             <div id="tx-network-row" class="detail-row hidden">
               <span class="label">Network</span>
               <span id="tx-network" class="value"></span>
+            </div>
+            <div id="tx-deployed-row" class="detail-row hidden">
+              <span class="label">Deployed</span>
+              <span id="tx-deployed" class="value value-address"></span>
             </div>
           </div>
 
@@ -715,6 +723,7 @@ export function getIndexHtml(): string {
         var viewError = "";
         var connectedAddress = "";
         var txHash = "";
+        var deployedAddress = "";
         var signature = "";
 
         // --- View renderers ---
@@ -763,7 +772,12 @@ export function getIndexHtml(): string {
           hide($("tx-footer"));
 
           var isContract = request.type === "trigger_contract";
-          $("tx-heading").textContent = isContract ? "Call Contract" : "Send TRX";
+          var isDeploy = request.type === "deploy_contract";
+          $("tx-heading").textContent = isDeploy
+            ? "Deploy Contract"
+            : isContract
+            ? "Call Contract"
+            : "Send TRX";
 
           if (request.from && viewStatus !== "success" && viewStatus !== "wrong_address") {
             $("tx-required-text").textContent = request.from;
@@ -772,6 +786,13 @@ export function getIndexHtml(): string {
 
           if (viewStatus === "success") {
             $("tx-hash").textContent = txHash;
+            if (isDeploy && deployedAddress) {
+              $("tx-deployed").textContent = deployedAddress;
+              show($("tx-deployed-row"));
+              show($("tx-details"));
+            } else {
+              hide($("tx-deployed-row"));
+            }
             show($("tx-success"));
           } else if (viewStatus === "wrong_address") {
             $("tx-wrong-expected").textContent = request.from;
@@ -782,7 +803,25 @@ export function getIndexHtml(): string {
             $("tx-err-msg").textContent = viewError;
             show($("tx-err"));
           } else {
-            if (isContract) {
+            hide($("tx-deployed-row"));
+            if (isDeploy) {
+              $("tx-to-label").textContent = "Contract";
+              $("tx-to").textContent = request.contractName || "(unnamed)";
+              $("tx-value").textContent = formatSun(request.callValue || "0") + " TRX";
+              hide($("tx-fn-row"));
+              if (request.parameters && request.parameters.length > 0) {
+                $("tx-params").textContent = JSON.stringify(request.parameters);
+                show($("tx-params-row"));
+              } else hide($("tx-params-row"));
+              var bc = String(request.bytecode || "");
+              if (bc.length > 80) bc = bc.slice(0, 40) + "…" + bc.slice(-20);
+              $("tx-bytecode").textContent = bc + " (" + ((request.bytecode || "").replace(/^0x/, "").length / 2) + " bytes)";
+              show($("tx-bytecode-row"));
+              if (request.feeLimit) {
+                $("tx-fee").textContent = formatSun(request.feeLimit) + " TRX";
+                show($("tx-fee-row"));
+              } else hide($("tx-fee-row"));
+            } else if (isContract) {
               $("tx-to-label").textContent = "Contract";
               $("tx-to").textContent = request.contractAddress;
               $("tx-value").textContent = formatSun(request.callValue || "0") + " TRX";
@@ -792,6 +831,7 @@ export function getIndexHtml(): string {
                 $("tx-params").textContent = JSON.stringify(request.parameters);
                 show($("tx-params-row"));
               } else hide($("tx-params-row"));
+              hide($("tx-bytecode-row"));
               if (request.feeLimit) {
                 $("tx-fee").textContent = formatSun(request.feeLimit) + " TRX";
                 show($("tx-fee-row"));
@@ -802,6 +842,7 @@ export function getIndexHtml(): string {
               $("tx-value").textContent = formatSun(request.amount || "0") + " TRX";
               hide($("tx-fn-row"));
               hide($("tx-params-row"));
+              hide($("tx-bytecode-row"));
               hide($("tx-fee-row"));
             }
             if (request.network) {
@@ -824,6 +865,8 @@ export function getIndexHtml(): string {
               ? "Connecting..."
               : viewStatus === "signing"
               ? "Confirm in TronLink..."
+              : request.type === "deploy_contract"
+              ? "Deploy"
               : "Sign & Send";
             show($("tx-footer"));
           }
@@ -899,7 +942,11 @@ export function getIndexHtml(): string {
         function render() {
           if (request === null) return;
           if (request.type === "connect") renderConnect();
-          else if (request.type === "send_transaction" || request.type === "trigger_contract") renderTx();
+          else if (
+            request.type === "send_transaction" ||
+            request.type === "trigger_contract" ||
+            request.type === "deploy_contract"
+          ) renderTx();
           else if (request.type === "sign_message" || request.type === "sign_typed_data") renderMsg();
         }
 
@@ -915,7 +962,11 @@ export function getIndexHtml(): string {
         }
 
         function expectedAddress() {
-          if (request.type === "send_transaction" || request.type === "trigger_contract") return request.from;
+          if (
+            request.type === "send_transaction" ||
+            request.type === "trigger_contract" ||
+            request.type === "deploy_contract"
+          ) return request.from;
           return request.address;
         }
 
@@ -980,6 +1031,7 @@ export function getIndexHtml(): string {
               if (!tw) throw new Error("TronLink not ready");
 
               var unsignedTx;
+              var newContractAddress = "";
               if (request.type === "trigger_contract") {
                 var options = {};
                 if (request.feeLimit) options.feeLimit = Number(BigInt(request.feeLimit));
@@ -995,6 +1047,40 @@ export function getIndexHtml(): string {
                   throw new Error("Failed to build contract call: " + JSON.stringify(built && built.result));
                 }
                 unsignedTx = built.transaction;
+              } else if (request.type === "deploy_contract") {
+                // tronWeb.transactionBuilder.createSmartContract expects raw constructor values;
+                // types come from the ABI. Strip {type, value} wrappers if present (our API
+                // shape mirrors triggerContract, which does want {type, value} pairs).
+                var rawDeployParams = (request.parameters || []).map(function (p) {
+                  return (p && typeof p === "object" && Object.prototype.hasOwnProperty.call(p, "value"))
+                    ? p.value
+                    : p;
+                });
+                var deployOpts = {
+                  abi: request.abi,
+                  bytecode: request.bytecode,
+                  feeLimit: Number(BigInt(request.feeLimit || "1500000000")),
+                  callValue: Number(BigInt(request.callValue || "0")),
+                  userFeePercentage: typeof request.userFeePercentage === "number" ? request.userFeePercentage : 100,
+                  originEnergyLimit: typeof request.originEnergyLimit === "number" ? request.originEnergyLimit : 10000000,
+                  name: request.contractName || "Contract",
+                  parameters: rawDeployParams,
+                };
+                unsignedTx = await tw.transactionBuilder.createSmartContract(deployOpts, connectedAddress);
+                var contractAddrHex = unsignedTx && (
+                  unsignedTx.contract_address ||
+                  (unsignedTx.raw_data
+                    && unsignedTx.raw_data.contract
+                    && unsignedTx.raw_data.contract[0]
+                    && unsignedTx.raw_data.contract[0].parameter
+                    && unsignedTx.raw_data.contract[0].parameter.value
+                    && unsignedTx.raw_data.contract[0].parameter.value.new_contract
+                    && unsignedTx.raw_data.contract[0].parameter.value.new_contract.contract_address)
+                );
+                if (!contractAddrHex) {
+                  throw new Error("Failed to read contract_address from createSmartContract result");
+                }
+                newContractAddress = tw.address.fromHex(contractAddrHex);
               } else {
                 unsignedTx = await tw.transactionBuilder.sendTrx(
                   request.to,
@@ -1015,7 +1101,15 @@ export function getIndexHtml(): string {
               txHash = signedTx.txID || (broadcast.transaction && broadcast.transaction.txID);
               if (!txHash) throw new Error("No txID returned from broadcast");
 
-              await completeSuccess(request.id, txHash);
+              if (request.type === "deploy_contract") {
+                deployedAddress = newContractAddress;
+                await completeSuccess(
+                  request.id,
+                  JSON.stringify({ txHash: txHash, contractAddress: newContractAddress }),
+                );
+              } else {
+                await completeSuccess(request.id, txHash);
+              }
               viewStatus = "success";
               render();
               setTimeout(function () {
@@ -1112,7 +1206,11 @@ export function getIndexHtml(): string {
             if (request.type === "connect") {
               showView("view-connect");
               renderConnect();
-            } else if (request.type === "send_transaction" || request.type === "trigger_contract") {
+            } else if (
+              request.type === "send_transaction" ||
+              request.type === "trigger_contract" ||
+              request.type === "deploy_contract"
+            ) {
               showView("view-tx");
               renderTx();
             } else if (request.type === "sign_message" || request.type === "sign_typed_data") {

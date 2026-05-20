@@ -40,10 +40,15 @@ await build({
     engines: pkg.engines,
   },
   postBuild() {
+    // dnt emits files under esm/<pkg>/src/ because of the wallet-signer-core workspace member.
+    // Point exports at the real mod.js location instead of the flat layout dnt assumes.
     const genPkgPath = join(outDir, "package.json");
     const genPkg = JSON.parse(Deno.readTextFileSync(genPkgPath));
+    const modJs = "./esm/browser-tron-signer/src/mod.js";
+    const modDts = "./esm/browser-tron-signer/src/mod.d.ts";
+    genPkg.module = modJs;
     genPkg.exports = {
-      ".": { import: { types: "./esm/mod.d.ts", default: "./esm/mod.js" } },
+      ".": { import: { types: modDts, default: modJs } },
     };
     Deno.writeTextFileSync(genPkgPath, JSON.stringify(genPkg, null, 2) + "\n");
   },

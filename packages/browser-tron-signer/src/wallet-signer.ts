@@ -30,10 +30,42 @@ export interface TriggerContractParams {
   contractAddress: string;
   from?: string;
   functionSelector: string;
-  parameters?: Array<{ type: string; value: unknown }>;
+  parameters?: ReadonlyArray<{ type: string; value: unknown }>;
   feeLimit?: string;
   callValue?: string;
   network?: TronNetwork;
+}
+
+/** Parameters for {@linkcode WalletSigner.deployContract}. */
+export interface DeployContractParams {
+  /** Contract ABI — forwarded to `tronWeb.transactionBuilder.createSmartContract`. */
+  abi: readonly unknown[];
+  /** Compiled bytecode (hex, with or without `0x` prefix). */
+  bytecode: string;
+  /** Human-readable contract name (shown in the approval UI). */
+  contractName?: string;
+  /** Constructor parameters as `Array<{type, value}>`. */
+  parameters?: ReadonlyArray<{ type: string; value: unknown }>;
+  /** Expected owner address. UI rejects on connected-wallet mismatch when set. */
+  from?: string;
+  /** Max energy fee in SUN. Defaults to 1500 TRX in the UI if omitted. */
+  feeLimit?: string;
+  /** TRX value (in SUN) to send to the constructor. */
+  callValue?: string;
+  /** Origin energy limit. Defaults to 10_000_000 in the UI if omitted. */
+  originEnergyLimit?: number;
+  /** Percentage of fee user pays (0-100). Defaults to 100 in the UI if omitted. */
+  userFeePercentage?: number;
+  network?: TronNetwork;
+}
+
+/** Result of {@linkcode WalletSigner.deployContract}. */
+export interface DeployContractResult {
+  /** Broadcast tx hash. */
+  txHash: string;
+  /** Deployed contract address (T-prefixed Base58). */
+  contractAddress: string;
+  approvalUrl: string;
 }
 
 /** Parameters for {@linkcode WalletSigner.signMessage}. */
@@ -174,6 +206,34 @@ export class WalletSigner {
     await this._openBrowser(approvalUrl);
 
     return { txHash: this._unwrap(await promise), approvalUrl };
+  }
+
+  /**
+   * Deploy a smart contract via `tronWeb.transactionBuilder.createSmartContract`. The browser
+   * builds, signs, and broadcasts the deployment using the connected wallet's tronWeb instance.
+   */
+  async deployContract(params: DeployContractParams): Promise<DeployContractResult> {
+    const port = await this.start();
+
+    const { id, promise } = this._pendingStore.createDeployContractRequest({
+      ...params,
+      network: params.network ?? this._defaultNetwork,
+    });
+
+    const approvalUrl = buildSignUrl(port, id);
+    await this._openBrowser(approvalUrl);
+
+    const raw = this._unwrap(await promise);
+    let parsed: { txHash?: string; contractAddress?: string };
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new Error(`browser-tron-signer: malformed deploy_contract result: ${raw}`);
+    }
+    if (!parsed.txHash || !parsed.contractAddress) {
+      throw new Error(`browser-tron-signer: missing fields in deploy_contract result: ${raw}`);
+    }
+    return { txHash: parsed.txHash, contractAddress: parsed.contractAddress, approvalUrl };
   }
 
   /** Sign an arbitrary message via `tronWeb.trx.signMessageV2`. */

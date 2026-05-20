@@ -2,6 +2,7 @@ import { generateRequestId, PendingStore as CorePendingStore, type RequestResult
 
 import type {
   ConnectRequest,
+  DeployContractRequest,
   SendTransactionRequest,
   SignMessageRequest,
   SignTypedDataRequest,
@@ -54,6 +55,27 @@ export class PendingStore extends CorePendingStore<TronPendingRequest> {
     const request: TriggerContractRequest = {
       id: generateRequestId(),
       type: "trigger_contract",
+      createdAt: Date.now(),
+      ...params,
+    };
+    return this.create(request);
+  }
+
+  createDeployContractRequest(params: {
+    abi: DeployContractRequest["abi"];
+    bytecode: string;
+    contractName?: string;
+    parameters?: DeployContractRequest["parameters"];
+    from?: string;
+    feeLimit?: string;
+    callValue?: string;
+    originEnergyLimit?: number;
+    userFeePercentage?: number;
+    network?: DeployContractRequest["network"];
+  }): { id: string; promise: Promise<RequestResult> } {
+    const request: DeployContractRequest = {
+      id: generateRequestId(),
+      type: "deploy_contract",
       createdAt: Date.now(),
       ...params,
     };
