@@ -136,18 +136,44 @@ Requires [Deno](https://deno.land/) v2.0+.
 # Install all dependencies
 deno task install:all
 
-# Type check + lint + format check (both packages)
+# Type check + lint + format check (all packages)
 deno task check:all
 
 # Run tests
 deno task test:all
 
-# Build both npm packages
+# Build all npm packages
 deno task build:all
 
 # Format code
 deno task fmt
 ```
+
+### Manual signing CLI
+
+A `signer-cli` script triggers the same flows that the MCP tools do, but from your shell —
+useful for smoke-testing against a real wallet without going through an MCP client.
+
+```bash
+# Discover subcommands
+deno task cli                                 # top-level help
+deno task cli evm help                        # EVM subcommands
+deno task cli tron help                       # TRON subcommands
+deno task cli evm send-transaction --help     # subcommand flags
+
+# Examples (each opens a browser; sign in MetaMask / TronLink)
+deno task cli evm  connect --chain 1
+deno task cli evm  send-transaction --to 0x... --value 1000000000000000000
+deno task cli evm  sign-message --message "hello"
+deno task cli tron connect --network mainnet
+deno task cli tron send-trx --to T... --amount 1000000
+deno task cli tron trigger-contract --contract T... \
+    --selector 'transfer(address,uint256)' \
+    --params '[{"type":"address","value":"T..."},{"type":"uint256","value":"1000000"}]'
+deno task cli tron get-balance --address T...   # no browser
+```
+
+Per-package `deno task trigger ...` works too if you're already inside `packages/browser-evm-signer/` or `packages/browser-tron-signer/`.
 
 ### Project Structure
 
