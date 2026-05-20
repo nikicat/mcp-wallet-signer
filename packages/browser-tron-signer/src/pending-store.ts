@@ -2,25 +2,25 @@ import { generateRequestId, PendingStore as CorePendingStore, type RequestResult
 
 import type {
   ConnectRequest,
-  PendingRequest,
   SendTransactionRequest,
   SignMessageRequest,
   SignTypedDataRequest,
+  TriggerContractRequest,
+  TronPendingRequest,
 } from "./types.ts";
 
 /**
- * EVM-specific {@linkcode CorePendingStore} subclass. Adds typed factory helpers that build the
- * EVM `PendingRequest` shapes before delegating to `create()` in the core.
+ * TRON-specific {@linkcode CorePendingStore} subclass with typed factory helpers.
  */
-export class PendingStore extends CorePendingStore<PendingRequest> {
+export class PendingStore extends CorePendingStore<TronPendingRequest> {
   createConnectRequest(
-    params?: { chainId?: number; address?: string },
+    params?: { network?: ConnectRequest["network"]; address?: string },
   ): { id: string; promise: Promise<RequestResult> } {
     const request: ConnectRequest = {
       id: generateRequestId(),
       type: "connect",
       createdAt: Date.now(),
-      chainId: params?.chainId,
+      network: params?.network,
       address: params?.address,
     };
     return this.create(request);
@@ -28,13 +28,10 @@ export class PendingStore extends CorePendingStore<PendingRequest> {
 
   createSendTransactionRequest(params: {
     to: string;
+    amount: string;
     from?: string;
-    value?: string;
     data?: string;
-    chainId?: number;
-    gasLimit?: string;
-    maxFeePerGas?: string;
-    maxPriorityFeePerGas?: string;
+    network?: SendTransactionRequest["network"];
   }): { id: string; promise: Promise<RequestResult> } {
     const request: SendTransactionRequest = {
       id: generateRequestId(),
@@ -45,8 +42,26 @@ export class PendingStore extends CorePendingStore<PendingRequest> {
     return this.create(request);
   }
 
+  createTriggerContractRequest(params: {
+    contractAddress: string;
+    functionSelector: string;
+    parameters?: TriggerContractRequest["parameters"];
+    from?: string;
+    feeLimit?: string;
+    callValue?: string;
+    network?: TriggerContractRequest["network"];
+  }): { id: string; promise: Promise<RequestResult> } {
+    const request: TriggerContractRequest = {
+      id: generateRequestId(),
+      type: "trigger_contract",
+      createdAt: Date.now(),
+      ...params,
+    };
+    return this.create(request);
+  }
+
   createSignMessageRequest(
-    params: { message: string; address?: string; chainId?: number },
+    params: { message: string; address?: string; network?: SignMessageRequest["network"] },
   ): { id: string; promise: Promise<RequestResult> } {
     const request: SignMessageRequest = {
       id: generateRequestId(),
@@ -63,7 +78,7 @@ export class PendingStore extends CorePendingStore<PendingRequest> {
     primaryType: string;
     message: Record<string, unknown>;
     address?: string;
-    chainId?: number;
+    network?: SignTypedDataRequest["network"];
   }): { id: string; promise: Promise<RequestResult> } {
     const request: SignTypedDataRequest = {
       id: generateRequestId(),
@@ -75,5 +90,5 @@ export class PendingStore extends CorePendingStore<PendingRequest> {
   }
 }
 
-/** Default singleton {@linkcode PendingStore} instance. */
+/** Default singleton {@linkcode PendingStore} instance for the TRON signer. */
 export const pendingStore: PendingStore = new PendingStore();

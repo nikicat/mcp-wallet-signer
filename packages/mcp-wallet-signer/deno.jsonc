@@ -21,7 +21,9 @@
     "lib": ["deno.window", "ES2022"]
   },
   "imports": {
+    "wallet-signer-core": "../wallet-signer-core/src/mod.ts",
     "browser-evm-signer": "../browser-evm-signer/src/mod.ts",
+    "browser-tron-signer": "../browser-tron-signer/src/mod.ts",
     "@modelcontextprotocol/sdk/server/index.js": "npm:@modelcontextprotocol/sdk@1.27.1/server/index.js",
     "@modelcontextprotocol/sdk/server/stdio.js": "npm:@modelcontextprotocol/sdk@1.27.1/server/stdio.js",
     "@modelcontextprotocol/sdk/types.js": "npm:@modelcontextprotocol/sdk@1.27.1/types.js",

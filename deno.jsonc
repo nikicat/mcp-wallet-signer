@@ -1,12 +1,12 @@
 {
   "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
   "tasks": {
-    "build:all": "cd packages/browser-evm-signer && deno task build:npm && cd ../mcp-wallet-signer && deno task build:npm",
-    "test:all": "cd packages/browser-evm-signer && deno task test",
-    "check:all": "cd packages/browser-evm-signer && deno task check && cd ../mcp-wallet-signer && deno task check",
-    "install:all": "cd packages/browser-evm-signer && deno task install:all",
-    "fmt": "cd packages/browser-evm-signer && deno task fmt && cd ../mcp-wallet-signer && deno task fmt",
-    "lint": "cd packages/browser-evm-signer && deno task lint && cd ../mcp-wallet-signer && deno task lint"
+    "build:all": "cd packages/wallet-signer-core && deno task build:npm && cd ../browser-evm-signer && deno task build:npm && cd ../browser-tron-signer && deno task build:npm && cd ../mcp-wallet-signer && deno task build:npm",
+    "test:all": "cd packages/wallet-signer-core && deno task test && cd ../browser-evm-signer && deno task test && cd ../browser-tron-signer && deno task test",
+    "check:all": "cd packages/wallet-signer-core && deno task check && cd ../browser-evm-signer && deno task check && cd ../browser-tron-signer && deno task check && cd ../mcp-wallet-signer && deno task check",
+    "install:all": "cd packages/wallet-signer-core && deno install && cd ../browser-evm-signer && deno task install:all && cd ../browser-tron-signer && deno install && cd ../mcp-wallet-signer && deno install",
+    "fmt": "cd packages/wallet-signer-core && deno task fmt && cd ../browser-evm-signer && deno task fmt && cd ../browser-tron-signer && deno task fmt && cd ../mcp-wallet-signer && deno task fmt",
+    "lint": "cd packages/wallet-signer-core && deno task lint && cd ../browser-evm-signer && deno task lint && cd ../browser-tron-signer && deno task lint && cd ../mcp-wallet-signer && deno task lint"
   },
   "fmt": {
     "useTabs": false,

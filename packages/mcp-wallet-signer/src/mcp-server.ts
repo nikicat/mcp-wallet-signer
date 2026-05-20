@@ -12,11 +12,23 @@ import type { CallToolRequest, GetPromptRequest, ReadResourceRequest } from "@mo
 
 import { CHAINS, getDefaultChainId, getPort, WalletSigner } from "browser-evm-signer";
 import {
+  getDefaultNetwork as getTronDefaultNetwork,
+  getPort as getTronPort,
+  NETWORKS as TRON_NETWORKS,
+  WalletSigner as TronWalletSigner,
+} from "browser-tron-signer";
+import {
   ConnectWalletSchema,
   GetBalanceSchema,
   SendTransactionSchema,
   SignMessageSchema,
   SignTypedDataSchema,
+  TronConnectWalletSchema,
+  TronGetBalanceSchema,
+  TronSendTransactionSchema,
+  TronSignMessageSchema,
+  TronSignTypedDataSchema,
+  TronTriggerContractSchema,
 } from "./schemas.ts";
 import { VERSION } from "./version.ts";
 
@@ -162,6 +174,127 @@ const TOOLS = [
       required: ["address"],
     },
   },
+  // === TRON tools ===
+  {
+    name: "tron_connect_wallet",
+    description:
+      "Connect to a TronLink browser wallet and get the TRON address (Base58, T...). IMPORTANT: This tool opens a browser window where the user must approve the connection in TronLink. Tell the user to switch to their browser window to approve. This tool blocks until the user acts or the request times out (5 min).",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        network: {
+          type: "string",
+          enum: ["mainnet", "shasta", "nile"],
+          description: "Tron network (default: mainnet)",
+        },
+        address: {
+          type: "string",
+          description: "Required TRON address (T...) — if specified, the user must connect this exact address",
+        },
+      },
+    },
+  },
+  {
+    name: "tron_send_transaction",
+    description:
+      "Send TRX (or call a contract via tron_trigger_contract). Opens a browser window where the user reviews and approves the transaction in TronLink. This tool blocks until the user acts or the request times out (5 min).",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        to: { type: "string", description: "Recipient TRON address (T...)" },
+        amount: {
+          type: "string",
+          description: "Amount in SUN (1 TRX = 1,000,000 SUN); pass as a string to preserve precision",
+        },
+        from: { type: "string", description: "Expected from-address; UI rejects on mismatch" },
+        data: { type: "string", description: "Optional memo / hex data" },
+        network: { type: "string", enum: ["mainnet", "shasta", "nile"] },
+      },
+      required: ["to", "amount"],
+    },
+  },
+  {
+    name: "tron_trigger_contract",
+    description:
+      "Call a TRON smart-contract function (TRC-20 transfers, etc.) via tronWeb.transactionBuilder.triggerSmartContract. Opens a browser window for user approval. Blocks until approved or timed out (5 min).",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        contractAddress: { type: "string", description: "Smart-contract address (T...)" },
+        functionSelector: {
+          type: "string",
+          description: "Function signature, e.g. `transfer(address,uint256)`",
+        },
+        parameters: {
+          type: "array",
+          description: "ABI-encoded parameter list — see TronWeb docs for shape",
+          items: {
+            type: "object",
+            properties: { type: { type: "string" }, value: {} },
+            required: ["type", "value"],
+          },
+        },
+        from: { type: "string", description: "Expected from-address; UI rejects on mismatch" },
+        feeLimit: { type: "string", description: "Max energy fee in SUN (default 150_000_000 = 150 TRX)" },
+        callValue: { type: "string", description: "TRX to send with the call, in SUN" },
+        network: { type: "string", enum: ["mainnet", "shasta", "nile"] },
+      },
+      required: ["contractAddress", "functionSelector"],
+    },
+  },
+  {
+    name: "tron_sign_message",
+    description:
+      "Sign an arbitrary message via tronWeb.trx.signMessageV2 (TRON's equivalent of personal_sign). Opens a browser window for user approval. Blocks until approved or timed out (5 min).",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        message: { type: "string", description: "Message to sign" },
+        address: { type: "string", description: "Address to sign with (uses connected address if not specified)" },
+        network: { type: "string", enum: ["mainnet", "shasta", "nile"] },
+      },
+      required: ["message"],
+    },
+  },
+  {
+    name: "tron_sign_typed_data",
+    description:
+      "Sign TIP-712 typed data via tronWeb.trx._signTypedData. Opens a browser window for user approval. Blocks until approved or timed out (5 min).",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        domain: {
+          type: "object",
+          description: "TIP-712 domain (name, version, chainId hex, verifyingContract, salt)",
+          properties: {
+            name: { type: "string" },
+            version: { type: "string" },
+            chainId: { type: "string" },
+            verifyingContract: { type: "string" },
+            salt: { type: "string" },
+          },
+        },
+        types: { type: "object", description: "Type definitions" },
+        primaryType: { type: "string", description: "Primary type name" },
+        message: { type: "object", description: "Message data to sign" },
+        address: { type: "string", description: "Address to sign with" },
+        network: { type: "string", enum: ["mainnet", "shasta", "nile"] },
+      },
+      required: ["domain", "types", "primaryType", "message"],
+    },
+  },
+  {
+    name: "tron_get_balance",
+    description: "Get the TRX balance of a TRON address. Does not require browser interaction — reads directly from TronGrid.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        address: { type: "string", description: "TRON address (T...)" },
+        network: { type: "string", enum: ["mainnet", "shasta", "nile"] },
+      },
+      required: ["address"],
+    },
+  },
 ];
 
 function textResult(text: string) {
@@ -174,10 +307,12 @@ function errorResult(message: string) {
 
 /**
  * Create and configure the MCP server.
- * If a WalletSigner is provided it will be used; otherwise a new one is created.
+ * Each signer (EVM, TRON) owns its own browser-facing HTTP bridge and binds to its own port.
+ * Pass instances to share them across multiple servers, or omit to construct defaults.
  */
-export function createMcpServer(signer?: WalletSigner): Server {
+export function createMcpServer(signer?: WalletSigner, tronSigner?: TronWalletSigner): Server {
   const walletSigner = signer ?? new WalletSigner();
+  const tronWalletSigner = tronSigner ?? new TronWalletSigner();
 
   const server = new Server(
     {
@@ -286,14 +421,20 @@ export function createMcpServer(signer?: WalletSigner): Server {
       resources: [
         {
           uri: "wallet://chains",
-          name: "Supported Chains",
-          description: "List of supported blockchain networks with chain IDs, RPC URLs, and native currencies",
+          name: "Supported EVM Chains",
+          description: "List of supported EVM chains with chain IDs, RPC URLs, and native currencies",
           mimeType: "application/json",
         },
         {
           uri: "wallet://config",
           name: "Server Configuration",
-          description: "Current MCP wallet signer configuration (default chain, port)",
+          description: "Current MCP wallet signer configuration (default chain/network, ports)",
+          mimeType: "application/json",
+        },
+        {
+          uri: "wallet://tron-networks",
+          name: "Supported TRON Networks",
+          description: "List of supported TRON networks with full-node URLs and block explorers",
           mimeType: "application/json",
         },
       ],
@@ -333,11 +474,38 @@ export function createMcpServer(signer?: WalletSigner): Server {
               mimeType: "application/json",
               text: JSON.stringify(
                 {
-                  defaultChainId: getDefaultChainId(),
-                  defaultChain: CHAINS[getDefaultChainId()]?.name ?? "Unknown",
-                  port: getPort(),
-                  supportedChainIds: Object.keys(CHAINS).map(Number),
+                  evm: {
+                    defaultChainId: getDefaultChainId(),
+                    defaultChain: CHAINS[getDefaultChainId()]?.name ?? "Unknown",
+                    port: getPort(),
+                    supportedChainIds: Object.keys(CHAINS).map(Number),
+                  },
+                  tron: {
+                    defaultNetwork: getTronDefaultNetwork(),
+                    port: getTronPort(),
+                    supportedNetworks: Object.keys(TRON_NETWORKS),
+                  },
                 },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      case "wallet://tron-networks":
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: "application/json",
+              text: JSON.stringify(
+                Object.values(TRON_NETWORKS).map((n) => ({
+                  network: n.id,
+                  name: n.name,
+                  fullHost: n.fullHost,
+                  nativeCurrency: n.nativeCurrency,
+                  blockExplorer: n.blockExplorer,
+                })),
                 null,
                 2,
               ),
@@ -390,6 +558,52 @@ export function createMcpServer(signer?: WalletSigner): Server {
           const { balance, wei, symbol } = await walletSigner.getBalance(parsed.data);
           return textResult(`Balance: ${balance} ${symbol}\nWei: ${wei}`);
         }
+        case "tron_connect_wallet": {
+          const parsed = TronConnectWalletSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { address, approvalUrl } = await tronWalletSigner.connectWallet(parsed.data);
+          return textResult(`Approval URL: ${approvalUrl}\nTron wallet connected successfully!\nAddress: ${address}`);
+        }
+        case "tron_send_transaction": {
+          const parsed = TronSendTransactionSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { txHash, approvalUrl } = await tronWalletSigner.sendTransaction(parsed.data);
+          const network = parsed.data.network || tronWalletSigner.defaultNetwork;
+          const explorer = TRON_NETWORKS[network]?.blockExplorer;
+          const explorerUrl = explorer ? `${explorer}/#/transaction/${txHash}` : null;
+          let text = `Approval URL: ${approvalUrl}\nTron transaction sent successfully!\nTransaction ID: ${txHash}`;
+          if (explorerUrl) text += `\nExplorer: ${explorerUrl}`;
+          return textResult(text);
+        }
+        case "tron_trigger_contract": {
+          const parsed = TronTriggerContractSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { txHash, approvalUrl } = await tronWalletSigner.triggerContract(parsed.data);
+          const network = parsed.data.network || tronWalletSigner.defaultNetwork;
+          const explorer = TRON_NETWORKS[network]?.blockExplorer;
+          const explorerUrl = explorer ? `${explorer}/#/transaction/${txHash}` : null;
+          let text = `Approval URL: ${approvalUrl}\nContract call broadcast!\nTransaction ID: ${txHash}`;
+          if (explorerUrl) text += `\nExplorer: ${explorerUrl}`;
+          return textResult(text);
+        }
+        case "tron_sign_message": {
+          const parsed = TronSignMessageSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { signature, approvalUrl } = await tronWalletSigner.signMessage(parsed.data);
+          return textResult(`Approval URL: ${approvalUrl}\nMessage signed successfully!\nSignature: ${signature}`);
+        }
+        case "tron_sign_typed_data": {
+          const parsed = TronSignTypedDataSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { signature, approvalUrl } = await tronWalletSigner.signTypedData(parsed.data);
+          return textResult(`Approval URL: ${approvalUrl}\nTyped data signed successfully!\nSignature: ${signature}`);
+        }
+        case "tron_get_balance": {
+          const parsed = TronGetBalanceSchema.safeParse(args);
+          if (!parsed.success) return errorResult(parsed.error.message);
+          const { balance, sun, symbol } = await tronWalletSigner.getBalance(parsed.data);
+          return textResult(`Balance: ${balance} ${symbol}\nSun: ${sun}`);
+        }
         default:
           return errorResult(`Unknown tool: ${name}`);
       }
@@ -403,14 +617,16 @@ export function createMcpServer(signer?: WalletSigner): Server {
 }
 
 /**
- * Run the MCP server with stdio transport
+ * Run the MCP server with stdio transport. Both the EVM and TRON signers are wired up so the
+ * agent has access to `connect_wallet` / `tron_connect_wallet` etc. side-by-side.
  */
 export async function runServer(): Promise<void> {
   const signer = new WalletSigner();
-  const server = createMcpServer(signer);
+  const tronSigner = new TronWalletSigner();
+  const server = createMcpServer(signer, tronSigner);
   const transport = new StdioServerTransport();
 
   await server.connect(transport);
 
-  console.error("[mcp-wallet-signer] MCP server started");
+  console.error("[mcp-wallet-signer] MCP server started (EVM + TRON)");
 }

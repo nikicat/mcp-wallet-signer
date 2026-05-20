@@ -1,21 +1,29 @@
 {
   "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
-  "name": "@nikicat/browser-evm-signer",
-  "version": "0.1.13",
-  "description": "Route EVM wallet signing requests to browser wallets like MetaMask via a local HTTP bridge",
+  "name": "@nikicat/browser-tron-signer",
+  "version": "0.1.0",
+  "description": "Route TRON wallet signing requests to browser wallets like TronLink via a local HTTP bridge",
   "license": "MIT",
   "exports": "./src/mod.ts",
   // npm package metadata (read by scripts/build-npm.ts; version comes from top-level field)
   "npm": {
-    "name": "browser-evm-signer",
-    "description": "Route EVM transactions to browser wallets for signing — standalone library, no MCP dependency",
+    "name": "browser-tron-signer",
+    "description": "Route TRON transactions to browser wallets for signing — standalone library, no MCP dependency",
     "author": "Nikolay Bryskin",
     "license": "MIT",
     "repository": { "type": "git", "url": "https://github.com/nikicat/mcp-wallet-signer" },
     "engines": { "node": ">=18" },
     "keywords": [
-      "wallet", "ethereum", "evm", "metamask", "eip-6963", "browser-wallet",
-      "signing", "blockchain", "web3", "non-custodial", "transaction-signing", "viem"
+      "wallet",
+      "tron",
+      "tronlink",
+      "tronweb",
+      "browser-wallet",
+      "signing",
+      "blockchain",
+      "tip-712",
+      "non-custodial",
+      "transaction-signing"
     ]
   },
   "compilerOptions": {
@@ -24,10 +32,7 @@
   },
   "imports": {
     "wallet-signer-core": "../wallet-signer-core/src/mod.ts",
-    "viem": "npm:viem@^2.48.4",
-    "viem/": "npm:viem@^2.48.4/",
     "open": "npm:open@11.0.0",
-    "@std/http": "jsr:@std/http@1.0.25",
     "@types/node": "npm:@types/node@25.5.0"
   },
   "permissions": {
@@ -44,12 +49,6 @@
       "net": true,
       "run": true,
       "sys": true
-    },
-    "test-e2e": {
-      "read": true,
-      "env": true,
-      "net": true,
-      "run": true
     }
   },
   "tasks": {
@@ -57,13 +56,6 @@
     "gen:web-ui": "deno run -A scripts/gen-web-ui.ts",
     "build:npm": "deno run -P=build-npm scripts/build-npm.ts",
     "test": "deno test -P=test tests/",
-    "test:e2e": "deno test -P=test-e2e tests/e2e/",
-    "test:browser": "cd tests/e2e-browser && deno task test",
-    "test:browser:ui": "cd tests/e2e-browser && deno task test:ui",
-    // Pin to the version used by the e2e tests (tests/e2e-browser/deno.json) — `@latest` will
-    // install a Chromium build that mismatches the test runtime if npm releases a new minor.
-    "playwright:install": "deno run -A npm:@playwright/test@1.58.2/cli install chromium",
-    "install:all": "deno install && deno install --config tests/e2e-browser/deno.json",
     "check": "deno check src/ tests/ scripts/ && deno lint src/ tests/ scripts/ && deno fmt --check src/ tests/ scripts/ && deno run -A npm:htmlhint src/index.html && deno run -A scripts/gen-web-ui.ts && git diff --quiet src/web-ui.gen.ts",
     "fmt": "deno fmt src/ tests/ scripts/",
     "lint": "deno lint src/ tests/"
@@ -80,8 +72,8 @@
     }
   },
   "nodeModulesDir": "auto",
-  "exclude": ["dist/", "npm/", "tests/e2e-browser/"],
+  "exclude": ["dist/", "npm/"],
   "publish": {
-    "exclude": ["tests/", "scripts/", "docs/", "deno.lock"]
+    "exclude": ["tests/", "scripts/", "deno.lock"]
   }
 }

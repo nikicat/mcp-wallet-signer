@@ -1,19 +1,15 @@
 import process from "node:process";
+
+import { DEFAULT_PORT, getPortFromEnv } from "wallet-signer-core";
+
 import type { ChainConfig } from "./types.ts";
 
-// Default HTTP server port
-export const DEFAULT_PORT = 3847;
+// Re-export so callers depending on `import { DEFAULT_PORT } from "browser-evm-signer"` still work.
+export { DEFAULT_PORT };
 
 /** Get the HTTP server port from `EVM_MCP_PORT` env var, falling back to {@linkcode DEFAULT_PORT}. */
 export function getPort(): number {
-  const envPort = process.env.EVM_MCP_PORT;
-  if (envPort) {
-    const parsed = parseInt(envPort, 10);
-    if (!isNaN(parsed) && parsed > 0 && parsed < 65536) {
-      return parsed;
-    }
-  }
-  return DEFAULT_PORT;
+  return getPortFromEnv("EVM_MCP_PORT", DEFAULT_PORT);
 }
 
 /** Get the default chain ID from `EVM_MCP_DEFAULT_CHAIN` env var, falling back to Ethereum mainnet (1). */
@@ -21,11 +17,9 @@ export function getDefaultChainId(): number {
   const envChain = process.env.EVM_MCP_DEFAULT_CHAIN;
   if (envChain) {
     const parsed = parseInt(envChain, 10);
-    if (!isNaN(parsed) && parsed > 0) {
-      return parsed;
-    }
+    if (!isNaN(parsed) && parsed > 0) return parsed;
   }
-  return 1; // Ethereum mainnet
+  return 1;
 }
 
 /** Built-in chain configurations keyed by chain ID (Ethereum, Polygon, Arbitrum, etc.). */

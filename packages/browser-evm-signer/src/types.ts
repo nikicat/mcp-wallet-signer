@@ -1,3 +1,16 @@
+import type { BaseRequest } from "wallet-signer-core";
+
+// Re-export the shared transport-layer types so existing consumers (and intra-package imports)
+// continue to find them at this path.
+export type {
+  CompleteApiRequest,
+  ErrorResult,
+  PendingApiResponse,
+  PendingEntry,
+  RequestResult,
+  SuccessResult,
+} from "wallet-signer-core";
+
 /** Configuration for a supported EVM chain (name, RPC URL, native currency, etc.). */
 export interface ChainConfig {
   id: number;
@@ -11,23 +24,18 @@ export interface ChainConfig {
   blockExplorer?: string;
 }
 
-// Request types for pending store
+/** Discriminator values for {@linkcode PendingRequest}. */
 export type RequestType = "connect" | "send_transaction" | "sign_message" | "sign_typed_data";
-
-export interface BaseRequest {
-  id: string;
-  type: RequestType;
-  chainId?: number;
-  createdAt: number;
-}
 
 export interface ConnectRequest extends BaseRequest {
   type: "connect";
+  chainId?: number;
   address?: string;
 }
 
 export interface SendTransactionRequest extends BaseRequest {
   type: "send_transaction";
+  chainId?: number;
   to: string;
   /** Expected `from` address. When set, the browser UI refuses to sign unless the connected wallet matches. */
   from?: string;
@@ -40,12 +48,14 @@ export interface SendTransactionRequest extends BaseRequest {
 
 export interface SignMessageRequest extends BaseRequest {
   type: "sign_message";
+  chainId?: number;
   message: string;
   address?: string;
 }
 
 export interface SignTypedDataRequest extends BaseRequest {
   type: "sign_typed_data";
+  chainId?: number;
   domain: TypedDataDomain;
   types: Record<string, TypedDataField[]>;
   primaryType: string;
@@ -73,38 +83,3 @@ export type PendingRequest =
   | SendTransactionRequest
   | SignMessageRequest
   | SignTypedDataRequest;
-
-// Response types
-export interface SuccessResult {
-  success: true;
-  result: string; // address, tx hash, or signature
-}
-
-export interface ErrorResult {
-  success: false;
-  error: string;
-  /** Discriminating code so consumers can react programmatically. See `SignerErrorCode`. */
-  code?: string;
-}
-
-export type RequestResult = SuccessResult | ErrorResult;
-
-// Pending store entry
-export interface PendingEntry<T extends PendingRequest = PendingRequest> {
-  request: T;
-  resolve: (result: RequestResult) => void;
-  reject: (error: Error) => void;
-}
-
-// HTTP API types
-export interface PendingApiResponse {
-  request: PendingRequest;
-}
-
-export interface CompleteApiRequest {
-  success: boolean;
-  result?: string;
-  error?: string;
-  /** Discriminating code paired with `error`. See `SignerErrorCode`. */
-  code?: string;
-}

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
+  "name": "@nikicat/wallet-signer-core",
+  "version": "0.1.0",
+  "description": "Chain-agnostic primitives for routing wallet signing through a local HTTP bridge — used by browser-evm-signer and browser-tron-signer",
+  "license": "MIT",
+  "exports": "./src/mod.ts",
+  // npm package metadata (read by scripts/build-npm.ts; version comes from top-level field)
+  "npm": {
+    "name": "wallet-signer-core",
+    "description": "Pending request store, HTTP bridge, and shared types for browser wallet signing — substrate for browser-evm-signer / browser-tron-signer",
+    "author": "Nikolay Bryskin",
+    "license": "MIT",
+    "repository": { "type": "git", "url": "https://github.com/nikicat/mcp-wallet-signer" },
+    "engines": { "node": ">=18" },
+    "keywords": [
+      "wallet",
+      "signing",
+      "blockchain",
+      "web3",
+      "browser-wallet",
+      "non-custodial",
+      "transaction-signing"
+    ]
+  },
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["deno.window", "ES2022"]
+  },
+  "imports": {
+    "open": "npm:open@11.0.0",
+    "@types/node": "npm:@types/node@25.5.0"
+  },
+  "permissions": {
+    "build-npm": {
+      "read": true,
+      "write": true,
+      "env": true,
+      "run": true,
+      "net": true
+    },
+    "test": {
+      "read": true,
+      "env": true,
+      "net": true,
+      "run": true,
+      "sys": true
+    }
+  },
+  "tasks": {
+    "build:npm": "deno run -P=build-npm scripts/build-npm.ts",
+    "test": "deno test -P=test tests/",
+    "check": "deno check src/ tests/ scripts/ && deno lint src/ tests/ scripts/ && deno fmt --check src/ tests/ scripts/",
+    "fmt": "deno fmt src/ tests/ scripts/",
+    "lint": "deno lint src/ tests/"
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 130,
+    "indentWidth": 2,
+    "singleQuote": false
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "nodeModulesDir": "auto",
+  "exclude": ["npm/"],
+  "publish": {
+    "exclude": ["tests/", "scripts/", "deno.lock"]
+  }
+}

@@ -53,6 +53,8 @@ bunx mcp-wallet-signer
 
 ## MCP Tools
 
+### EVM (MetaMask / Rabby / any EIP-6963 wallet)
+
 | Tool               | Description                            | Browser Required |
 | ------------------ | -------------------------------------- | ---------------- |
 | `connect_wallet`   | Connect wallet, return address         | Yes              |
@@ -60,6 +62,17 @@ bunx mcp-wallet-signer
 | `sign_message`     | Sign arbitrary message (personal_sign) | Yes              |
 | `sign_typed_data`  | Sign EIP-712 typed data                | Yes              |
 | `get_balance`      | Read ETH balance (via RPC)             | No               |
+
+### TRON (TronLink)
+
+| Tool                    | Description                                            | Browser Required |
+| ----------------------- | ------------------------------------------------------ | ---------------- |
+| `tron_connect_wallet`   | Connect TronLink, return Base58 (T…) address           | Yes              |
+| `tron_send_transaction` | Native TRX transfer                                    | Yes              |
+| `tron_trigger_contract` | TRC-20 / smart-contract call via `triggerSmartContract`| Yes              |
+| `tron_sign_message`     | Sign arbitrary message (`signMessageV2`)               | Yes              |
+| `tron_sign_typed_data`  | Sign TIP-712 typed data                                | Yes              |
+| `tron_get_balance`      | Read TRX balance (via TronGrid)                        | No               |
 
 ## How It Works
 
@@ -85,25 +98,35 @@ Built-in RPC URLs for:
 - Avalanche (43114)
 - BNB Smart Chain (56)
 
+## Supported TRON Networks
+
+- Tron Mainnet
+- Shasta Testnet
+- Nile Testnet
+
 ## Configuration
 
 Environment variables (optional):
 
-| Variable                | Description      | Default |
-| ----------------------- | ---------------- | ------- |
-| `EVM_MCP_PORT`          | HTTP server port | 3847    |
-| `EVM_MCP_DEFAULT_CHAIN` | Default chain ID | 1       |
+| Variable                    | Description                          | Default   |
+| --------------------------- | ------------------------------------ | --------- |
+| `EVM_MCP_PORT`              | EVM HTTP server port                 | 3847      |
+| `EVM_MCP_DEFAULT_CHAIN`     | Default EVM chain ID                 | 1         |
+| `TRON_MCP_PORT`             | TRON HTTP server port                | 3848      |
+| `TRON_MCP_DEFAULT_NETWORK`  | Default TRON network (mainnet/shasta/nile) | mainnet |
 
 ## Packages
 
-This is a monorepo with two packages:
+This is a monorepo with four packages:
 
 | Package | Description |
 | ------- | ----------- |
-| [`browser-evm-signer`](packages/browser-evm-signer) | Standalone library — sign EVM transactions via browser wallet, no MCP dependency |
-| [`mcp-wallet-signer`](packages/mcp-wallet-signer) | MCP server — exposes browser-evm-signer as MCP tools for AI agents |
+| [`wallet-signer-core`](packages/wallet-signer-core) | Chain-agnostic primitives (PendingStore, HTTP bridge, errors) shared by the chain packages |
+| [`browser-evm-signer`](packages/browser-evm-signer) | Standalone library — sign EVM transactions via MetaMask/Rabby/any EIP-6963 wallet |
+| [`browser-tron-signer`](packages/browser-tron-signer) | Standalone library — sign TRON transactions via TronLink |
+| [`mcp-wallet-signer`](packages/mcp-wallet-signer) | MCP server — exposes the EVM and TRON signers as MCP tools for AI agents |
 
-Use `browser-evm-signer` directly if you want browser-based signing in your own Node.js/Deno app without MCP.
+Use the chain-specific packages directly if you want browser-based signing in your own Node.js/Deno app without MCP.
 
 ## Development
 
@@ -130,10 +153,19 @@ deno task fmt
 
 ```
 packages/
-├── browser-evm-signer/     # Standalone signing library (npm: browser-evm-signer)
-│   ├── src/                 # Library source
-│   ├── web/                 # Svelte approval UI
-│   ├── tests/               # Unit, e2e, and browser tests
+├── wallet-signer-core/      # Chain-agnostic primitives (npm: wallet-signer-core)
+│   ├── src/                  # PendingStore, HTTP bridge, errors, browser opener
+│   ├── tests/                # Core unit tests
+│   └── scripts/build-npm.ts
+│
+├── browser-evm-signer/      # EVM signing library (npm: browser-evm-signer)
+│   ├── src/                  # EVM types, viem transport, EIP-6963 approval UI
+│   ├── tests/                # Unit, e2e, and browser tests
+│   └── scripts/build-npm.ts
+│
+├── browser-tron-signer/     # TRON signing library (npm: browser-tron-signer)
+│   ├── src/                  # TRON types, TronLink approval UI, TronGrid balance fetch
+│   ├── tests/                # Unit tests
 │   └── scripts/build-npm.ts
 │
 └── mcp-wallet-signer/       # MCP server layer (npm: mcp-wallet-signer)
@@ -141,7 +173,7 @@ packages/
     └── scripts/build-npm.ts
 ```
 
-Both packages are built with [dnt](https://github.com/denoland/dnt) and use `node:` builtins (no Deno-specific APIs) so the npm bundles run under Node.js.
+All packages are built with [dnt](https://github.com/denoland/dnt) and use `node:` builtins (no Deno-specific APIs) so the npm bundles run under Node.js.
 
 ## License
 

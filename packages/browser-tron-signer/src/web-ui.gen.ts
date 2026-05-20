@@ -1,0 +1,1141 @@
+// AUTO-GENERATED from src/index.html — do not edit directly.
+// Regenerate: deno task gen:web-ui
+
+/** Returns the self-contained HTML for the TRON wallet signing UI. */
+export function getIndexHtml(): string {
+  // deno-fmt-ignore
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tron Wallet Signer</title>
+    <style>
+      *, *::before, *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #0f0f0f;
+        color: #e0e0e0;
+        line-height: 1.5;
+      }
+
+      .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+      }
+      .card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 450px;
+        width: 100%;
+        text-align: center;
+        backdrop-filter: blur(10px);
+      }
+
+      .icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 20px;
+      }
+      .icon svg {
+        width: 100%;
+        height: 100%;
+      }
+      /* Tron brand red */
+      .icon-connect {
+        color: #ec0928;
+      }
+      .icon-transaction {
+        color: #f59e0b;
+      }
+      .icon-sign {
+        color: #8b5cf6;
+      }
+
+      h1 {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #fff;
+      }
+      .description {
+        color: #9ca3af;
+        margin-bottom: 24px;
+      }
+      .page-text {
+        color: #9ca3af;
+        max-width: 400px;
+      }
+
+      .chain-badge {
+        display: inline-block;
+        background: rgba(236, 9, 40, 0.2);
+        color: #fca5af;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 14px;
+        margin-bottom: 24px;
+      }
+      .chain-badge-purple {
+        background: rgba(139, 92, 246, 0.2);
+        color: #c4b5fd;
+        margin-bottom: 20px;
+      }
+      .required-address {
+        background: rgba(234, 179, 8, 0.1);
+        border: 1px solid rgba(234, 179, 8, 0.3);
+        color: #fbbf24;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-bottom: 24px;
+        word-break: break-all;
+      }
+      .connected-badge {
+        display: inline-block;
+        background: rgba(34, 197, 94, 0.2);
+        color: #4ade80;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-family: monospace;
+        margin-bottom: 20px;
+      }
+
+      .wallet-info {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: #9ca3af;
+        margin-bottom: 24px;
+      }
+      .wallet-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+      }
+      .wallet-name {
+        color: #ec0928;
+        font-weight: 500;
+      }
+
+      .buttons {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+      }
+      .btn-primary, .btn-secondary {
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #ec0928, #b91c2c);
+        color: white;
+      }
+      .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(236, 9, 40, 0.4);
+      }
+      .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .btn-primary-amber {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+      }
+      .btn-primary-amber:hover:not(:disabled) {
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+      }
+      .btn-primary-purple {
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      }
+      .btn-primary-purple:hover:not(:disabled) {
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+      }
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: #e0e0e0;
+      }
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .success-box, .error-box {
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .success-box {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #4ade80;
+      }
+      .error-box {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #f87171;
+      }
+
+      .address {
+        font-family: monospace;
+        font-size: 12px;
+        word-break: break-all;
+        margin-top: 8px;
+      }
+      .small {
+        font-size: 12px;
+        opacity: 0.8;
+        margin-top: 8px;
+      }
+      .hash {
+        font-family: monospace;
+        font-size: 11px;
+        word-break: break-all;
+        margin-top: 8px;
+      }
+      .signature {
+        font-family: monospace;
+        font-size: 10px;
+        word-break: break-all;
+        margin-top: 8px;
+      }
+      .hidden {
+        display: none !important;
+      }
+
+      .tx-details {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+        text-align: left;
+      }
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .detail-row:last-child {
+        border-bottom: none;
+      }
+      .label {
+        color: #9ca3af;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      .value {
+        color: #e0e0e0;
+        font-size: 14px;
+        text-align: right;
+        word-break: break-all;
+        margin-left: 16px;
+      }
+      .value-address {
+        font-family: monospace;
+        font-size: 12px;
+      }
+      .value-mono {
+        font-family: monospace;
+        font-size: 11px;
+      }
+
+      .message-box {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+        text-align: left;
+      }
+      .message-label {
+        color: #9ca3af;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+      .message-content {
+        color: #e0e0e0;
+        font-size: 14px;
+        word-break: break-word;
+        white-space: pre-wrap;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      .typed-data {
+        color: #e0e0e0;
+        font-size: 11px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 300px;
+        overflow-y: auto;
+        margin: 0;
+        padding: 8px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+      }
+
+      .spinner {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto;
+        border: 3px solid rgba(236, 9, 40, 0.2);
+        border-top-color: #ec0928;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .loading-text {
+        color: #9ca3af;
+        margin-top: 16px;
+      }
+
+      .error-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 24px;
+        background: rgba(239, 68, 68, 0.2);
+        border: 2px solid rgba(239, 68, 68, 0.5);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        font-weight: bold;
+        color: #f87171;
+      }
+      .hint {
+        margin-top: 24px;
+        font-size: 14px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" class="container">
+      <!-- === Loading === -->
+      <div id="view-loading" style="text-align: center">
+        <div class="spinner"></div>
+        <p class="loading-text">Loading request...</p>
+      </div>
+
+      <!-- === Page-level error === -->
+      <div id="view-error" class="hidden" style="text-align: center">
+        <div class="error-icon">!</div>
+        <h1>Error</h1>
+        <p id="error-msg" class="page-text"></p>
+      </div>
+
+      <!-- === Not found === -->
+      <div id="view-not-found" class="hidden" style="text-align: center">
+        <div class="error-icon">?</div>
+        <h1>Request Not Found</h1>
+        <p class="page-text">This signing request has expired or doesn't exist.</p>
+        <p class="hint">You can close this window.</p>
+      </div>
+
+      <!-- === Connect Wallet === -->
+      <div id="view-connect" class="hidden">
+        <div class="card">
+          <div class="icon icon-connect">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M21 18v1c0 1.1-.9 2-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14c1.1 0 2 .9 2 2v1h-9a2 2 0 00-2 2v8a2 2 0 002 2h9zm-9-2h10V8H12v8zm4-2.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z"
+              />
+            </svg>
+          </div>
+          <h1>Connect Tron Wallet</h1>
+          <p class="description">An application is requesting to connect to your TronLink wallet.</p>
+
+          <div id="connect-chain" class="chain-badge hidden"></div>
+          <div id="connect-required" class="required-address hidden">
+            Required: <span id="connect-required-text" class="address"></span>
+          </div>
+
+          <div id="connect-no-wallet" class="error-box hidden">
+            <p>No TronLink wallet detected</p>
+            <p class="small">
+              Install <a href="https://www.tronlink.org" style="color: #fca5af">TronLink</a> and unlock it, then refresh this
+              page.
+            </p>
+          </div>
+
+          <div id="connect-success" class="success-box hidden">
+            <p>Connected!</p>
+            <p id="connect-success-addr" class="address"></p>
+            <p class="small">This window will close automatically...</p>
+          </div>
+
+          <div id="connect-wrong" class="hidden">
+            <div class="error-box">
+              <p>Wrong Address</p>
+              <p class="small">Expected: <span id="connect-wrong-expected" class="address"></span></p>
+              <p class="small">Connected: <span id="connect-wrong-got" class="address"></span></p>
+              <p class="small">Switch to the correct account in TronLink, or click Try Again.</p>
+            </div>
+            <div class="buttons">
+              <button class="btn-secondary" onclick="app.cancelConnect()">Cancel</button>
+              <button class="btn-primary" onclick="app.handleConnect()">Try Again</button>
+            </div>
+          </div>
+
+          <div id="connect-err" class="hidden">
+            <div class="error-box">
+              <p>Connection Failed</p>
+              <p id="connect-err-msg" class="small"></p>
+            </div>
+            <div class="buttons">
+              <button class="btn-secondary" onclick="app.cancelConnect()">Cancel</button>
+              <button class="btn-primary" onclick="app.handleConnect()">Try Again</button>
+            </div>
+          </div>
+
+          <div id="connect-idle" class="hidden">
+            <div class="wallet-info">
+              <span id="connect-wname" class="wallet-name">TronLink</span> detected
+            </div>
+            <div class="buttons">
+              <button class="btn-secondary" onclick="app.cancelConnect()">Cancel</button>
+              <button id="connect-btn" class="btn-primary" onclick="app.handleConnect()">Connect</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === Send Transaction === -->
+      <div id="view-tx" class="hidden">
+        <div class="card">
+          <div class="icon icon-transaction">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
+              />
+            </svg>
+          </div>
+          <h1 id="tx-heading">Send Transaction</h1>
+
+          <div id="tx-required" class="required-address hidden">
+            Required: <span id="tx-required-text" class="address"></span>
+          </div>
+
+          <div id="tx-success" class="success-box hidden">
+            <p>Transaction Sent!</p>
+            <p id="tx-hash" class="hash"></p>
+            <p class="small">This window will close automatically...</p>
+          </div>
+
+          <div id="tx-wrong" class="hidden">
+            <div class="error-box">
+              <p>Wrong Address</p>
+              <p class="small">Expected: <span id="tx-wrong-expected" class="address"></span></p>
+              <p class="small">Connected: <span id="tx-wrong-got" class="address"></span></p>
+              <p class="small">Switch to the correct account in TronLink to continue.</p>
+            </div>
+            <div class="buttons">
+              <button class="btn-secondary" onclick="app.rejectTx()">Reject</button>
+            </div>
+          </div>
+
+          <div id="tx-err" class="error-box hidden">
+            <p>Transaction Failed</p>
+            <p id="tx-err-msg" class="small"></p>
+          </div>
+
+          <div id="tx-details" class="tx-details hidden">
+            <div id="tx-to-row" class="detail-row">
+              <span class="label" id="tx-to-label">To</span>
+              <span id="tx-to" class="value value-address"></span>
+            </div>
+            <div id="tx-value-row" class="detail-row">
+              <span class="label">Value</span>
+              <span id="tx-value" class="value"></span>
+            </div>
+            <div id="tx-fn-row" class="detail-row hidden">
+              <span class="label">Function</span>
+              <span id="tx-fn" class="value value-mono"></span>
+            </div>
+            <div id="tx-params-row" class="detail-row hidden">
+              <span class="label">Params</span>
+              <span id="tx-params" class="value value-mono"></span>
+            </div>
+            <div id="tx-fee-row" class="detail-row hidden">
+              <span class="label">Fee Limit</span>
+              <span id="tx-fee" class="value"></span>
+            </div>
+            <div id="tx-network-row" class="detail-row hidden">
+              <span class="label">Network</span>
+              <span id="tx-network" class="value"></span>
+            </div>
+          </div>
+
+          <div id="tx-no-wallet" class="error-box hidden">
+            <p>No TronLink wallet detected</p>
+            <p class="small">Install TronLink and unlock it to continue.</p>
+          </div>
+
+          <div id="tx-footer" class="hidden">
+            <div id="tx-connected" class="connected-badge hidden"></div>
+            <div class="buttons">
+              <button class="btn-secondary" onclick="app.rejectTx()">Reject</button>
+              <button id="tx-btn" class="btn-primary btn-primary-amber" onclick="app.handleSignTx()">Sign &amp; Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === Sign Message / Typed Data === -->
+      <div id="view-msg" class="hidden">
+        <div class="card" style="max-width: 500px">
+          <div class="icon icon-sign">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+              />
+            </svg>
+          </div>
+          <h1 id="msg-heading">Sign Message</h1>
+
+          <div id="msg-required" class="required-address hidden">
+            Required: <span id="msg-required-text" class="address"></span>
+          </div>
+
+          <div id="msg-success" class="success-box hidden">
+            <p>Signed Successfully!</p>
+            <p id="msg-sig" class="signature"></p>
+            <p class="small">This window will close automatically...</p>
+          </div>
+
+          <div id="msg-wrong" class="hidden">
+            <div class="error-box">
+              <p>Wrong Address</p>
+              <p class="small">Expected: <span id="msg-wrong-expected" class="address"></span></p>
+              <p class="small">Connected: <span id="msg-wrong-got" class="address"></span></p>
+              <p class="small">Switch to the correct account in TronLink to continue.</p>
+            </div>
+            <div class="buttons">
+              <button class="btn-secondary" onclick="app.rejectSign()">Reject</button>
+            </div>
+          </div>
+
+          <div id="msg-err" class="error-box hidden">
+            <p>Signing Failed</p>
+            <p id="msg-err-msg" class="small"></p>
+          </div>
+
+          <div id="msg-content" class="message-box hidden">
+            <div id="msg-plain" class="hidden">
+              <div class="message-label">Message</div>
+              <div id="msg-text" class="message-content"></div>
+            </div>
+            <div id="msg-typed" class="hidden">
+              <div class="message-label">Typed Data (TIP-712)</div>
+              <pre id="msg-typed-data" class="typed-data"></pre>
+            </div>
+          </div>
+
+          <div id="msg-chain" class="chain-badge chain-badge-purple hidden"></div>
+
+          <div id="msg-no-wallet" class="error-box hidden">
+            <p>No TronLink wallet detected</p>
+            <p class="small">Install TronLink and unlock it to continue.</p>
+          </div>
+
+          <div id="msg-footer" class="hidden">
+            <div id="msg-connected" class="connected-badge hidden"></div>
+            <div class="buttons">
+              <button class="btn-secondary" onclick="app.rejectSign()">Reject</button>
+              <button id="msg-btn" class="btn-primary btn-primary-purple" onclick="app.handleSignMsg()">Sign</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        // --- Utilities ---
+        function formatSun(sunStr) {
+          if (!sunStr || sunStr === "0") return "0";
+          var s = BigInt(sunStr).toString().padStart(7, "0");
+          var whole = s.slice(0, s.length - 6) || "0";
+          var frac = s.slice(s.length - 6).replace(/0+$/, "");
+          return frac ? whole + "." + frac : whole;
+        }
+
+        // TRON Base58 addresses are case-sensitive, unlike EVM 0x-hex addresses.
+        function addressMatch(a, b) {
+          return String(a) === String(b);
+        }
+        function truncAddr(addr) {
+          if (!addr || addr.length < 10) return String(addr);
+          return addr.slice(0, 6) + "..." + addr.slice(-4);
+        }
+
+        function $(id) {
+          return document.getElementById(id);
+        }
+        function show(el) {
+          el.classList.remove("hidden");
+        }
+        function hide(el) {
+          el.classList.add("hidden");
+        }
+
+        var ALL_VIEWS = ["view-loading", "view-error", "view-not-found", "view-connect", "view-tx", "view-msg"];
+        function showView(id) {
+          for (var i = 0; i < ALL_VIEWS.length; i++) hide($(ALL_VIEWS[i]));
+          show($(id));
+        }
+
+        // --- TronLink readiness ---
+        // TronLink injects window.tronWeb asynchronously. tronLink.ready flips to true once
+        // the user has unlocked and authorised the page. We wait up to ~3s.
+        function waitForTronWeb(timeoutMs) {
+          var deadline = Date.now() + (timeoutMs || 3000);
+          return new Promise(function (resolve) {
+            (function tick() {
+              if (window.tronWeb && window.tronWeb.defaultAddress) {
+                resolve(window.tronWeb);
+                return;
+              }
+              if (Date.now() >= deadline) {
+                resolve(window.tronWeb || null);
+                return;
+              }
+              setTimeout(tick, 100);
+            })();
+          });
+        }
+
+        function hasTronLink() {
+          return !!(window.tronLink || window.tronWeb);
+        }
+
+        function getConnectedAddress() {
+          var tw = window.tronWeb;
+          if (tw && tw.defaultAddress && tw.defaultAddress.base58) return tw.defaultAddress.base58;
+          return "";
+        }
+
+        async function requestAccounts() {
+          if (window.tronLink && typeof window.tronLink.request === "function") {
+            var resp = await window.tronLink.request({ method: "tron_requestAccounts" });
+            // tron_requestAccounts returns {code: 200} on success; user-rejection is 4001.
+            if (resp && resp.code === 4001) throw new Error("User rejected wallet connection");
+            if (resp && resp.code && resp.code !== 200) {
+              throw new Error(resp.message || ("TronLink error code " + resp.code));
+            }
+          }
+          var tw = await waitForTronWeb(5000);
+          if (!tw) throw new Error("TronLink did not become ready");
+          var addr = tw.defaultAddress && tw.defaultAddress.base58;
+          if (!addr) throw new Error("No account returned from TronLink");
+          return addr;
+        }
+
+        // --- TronLink network detection ---
+        // tronWeb.fullNode.host carries the connected node URL; we compare against the
+        // network the request asked for and surface a soft warning if they diverge.
+        function currentNetworkHost() {
+          var tw = window.tronWeb;
+          if (!tw || !tw.fullNode || !tw.fullNode.host) return "";
+          return tw.fullNode.host;
+        }
+
+        function networkLabel(network) {
+          if (network === "shasta") return "Shasta Testnet";
+          if (network === "nile") return "Nile Testnet";
+          if (network === "mainnet") return "Tron Mainnet";
+          return network || "Tron Mainnet";
+        }
+
+        // --- API Client ---
+        async function fetchPendingRequest(id) {
+          var res = await fetch("/api/pending/" + id);
+          if (!res.ok) {
+            var err = await res.json().catch(function () {
+              return { error: "Unknown error" };
+            });
+            throw new Error(err.error || "HTTP " + res.status);
+          }
+          return (await res.json()).request;
+        }
+
+        async function completeSuccess(id, result) {
+          var res = await fetch("/api/complete/" + id, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ success: true, result: result }),
+          });
+          if (!res.ok) {
+            var err = await res.json().catch(function () {
+              return { error: "Unknown error" };
+            });
+            throw new Error(err.error || "HTTP " + res.status);
+          }
+        }
+
+        async function completeError(id, error, code) {
+          await fetch("/api/complete/" + id, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ success: false, error: error, code: code }),
+          }).catch(function () {});
+        }
+
+        // Keep in sync with \`SignerErrorCode\` in wallet-signer-core/src/errors.ts.
+        var ERROR_CODE_WRONG_WALLET_ADDRESS = "WRONG_WALLET_ADDRESS";
+
+        // --- App State ---
+        var request = null;
+        var viewStatus = "idle";
+        var viewError = "";
+        var connectedAddress = "";
+        var txHash = "";
+        var signature = "";
+
+        // --- View renderers ---
+
+        var CONNECT_SECTIONS = ["connect-no-wallet", "connect-success", "connect-wrong", "connect-err", "connect-idle"];
+
+        function renderConnect() {
+          if (request.network) {
+            $("connect-chain").textContent = networkLabel(request.network);
+            show($("connect-chain"));
+          } else hide($("connect-chain"));
+
+          if (request.address && viewStatus !== "success" && viewStatus !== "wrong_address") {
+            $("connect-required-text").textContent = request.address;
+            show($("connect-required"));
+          } else hide($("connect-required"));
+
+          for (var i = 0; i < CONNECT_SECTIONS.length; i++) hide($(CONNECT_SECTIONS[i]));
+
+          if (!hasTronLink()) {
+            show($("connect-no-wallet"));
+          } else if (viewStatus === "success") {
+            $("connect-success-addr").textContent = connectedAddress;
+            show($("connect-success"));
+          } else if (viewStatus === "wrong_address") {
+            $("connect-wrong-expected").textContent = request.address;
+            $("connect-wrong-got").textContent = connectedAddress;
+            show($("connect-wrong"));
+          } else if (viewStatus === "error") {
+            $("connect-err-msg").textContent = viewError;
+            show($("connect-err"));
+          } else {
+            var btn = $("connect-btn");
+            btn.disabled = viewStatus === "connecting";
+            btn.textContent = viewStatus === "connecting" ? "Connecting..." : "Connect";
+            show($("connect-idle"));
+          }
+        }
+
+        function renderTx() {
+          hide($("tx-success"));
+          hide($("tx-wrong"));
+          hide($("tx-err"));
+          hide($("tx-details"));
+          hide($("tx-no-wallet"));
+          hide($("tx-footer"));
+
+          var isContract = request.type === "trigger_contract";
+          $("tx-heading").textContent = isContract ? "Call Contract" : "Send TRX";
+
+          if (request.from && viewStatus !== "success" && viewStatus !== "wrong_address") {
+            $("tx-required-text").textContent = request.from;
+            show($("tx-required"));
+          } else hide($("tx-required"));
+
+          if (viewStatus === "success") {
+            $("tx-hash").textContent = txHash;
+            show($("tx-success"));
+          } else if (viewStatus === "wrong_address") {
+            $("tx-wrong-expected").textContent = request.from;
+            $("tx-wrong-got").textContent = connectedAddress;
+            show($("tx-wrong"));
+            return;
+          } else if (viewStatus === "error") {
+            $("tx-err-msg").textContent = viewError;
+            show($("tx-err"));
+          } else {
+            if (isContract) {
+              $("tx-to-label").textContent = "Contract";
+              $("tx-to").textContent = request.contractAddress;
+              $("tx-value").textContent = formatSun(request.callValue || "0") + " TRX";
+              $("tx-fn").textContent = request.functionSelector;
+              show($("tx-fn-row"));
+              if (request.parameters && request.parameters.length > 0) {
+                $("tx-params").textContent = JSON.stringify(request.parameters);
+                show($("tx-params-row"));
+              } else hide($("tx-params-row"));
+              if (request.feeLimit) {
+                $("tx-fee").textContent = formatSun(request.feeLimit) + " TRX";
+                show($("tx-fee-row"));
+              } else hide($("tx-fee-row"));
+            } else {
+              $("tx-to-label").textContent = "To";
+              $("tx-to").textContent = request.to;
+              $("tx-value").textContent = formatSun(request.amount || "0") + " TRX";
+              hide($("tx-fn-row"));
+              hide($("tx-params-row"));
+              hide($("tx-fee-row"));
+            }
+            if (request.network) {
+              $("tx-network").textContent = networkLabel(request.network);
+              show($("tx-network-row"));
+            } else hide($("tx-network-row"));
+            show($("tx-details"));
+          }
+
+          if (!hasTronLink()) {
+            show($("tx-no-wallet"));
+          } else if (viewStatus !== "success") {
+            if (connectedAddress) {
+              $("tx-connected").textContent = "Connected: " + truncAddr(connectedAddress);
+              show($("tx-connected"));
+            } else hide($("tx-connected"));
+            var btn = $("tx-btn");
+            btn.disabled = viewStatus === "connecting" || viewStatus === "signing";
+            btn.textContent = viewStatus === "connecting"
+              ? "Connecting..."
+              : viewStatus === "signing"
+              ? "Confirm in TronLink..."
+              : "Sign & Send";
+            show($("tx-footer"));
+          }
+        }
+
+        function renderMsg() {
+          var isTypedData = request.type === "sign_typed_data";
+          $("msg-heading").textContent = isTypedData ? "Sign Typed Data" : "Sign Message";
+
+          hide($("msg-success"));
+          hide($("msg-wrong"));
+          hide($("msg-err"));
+          hide($("msg-content"));
+          hide($("msg-chain"));
+          hide($("msg-no-wallet"));
+          hide($("msg-footer"));
+
+          if (request.address && viewStatus !== "success" && viewStatus !== "wrong_address") {
+            $("msg-required-text").textContent = request.address;
+            show($("msg-required"));
+          } else hide($("msg-required"));
+
+          if (viewStatus === "success") {
+            $("msg-sig").textContent = signature;
+            show($("msg-success"));
+          } else if (viewStatus === "wrong_address") {
+            $("msg-wrong-expected").textContent = request.address;
+            $("msg-wrong-got").textContent = connectedAddress;
+            show($("msg-wrong"));
+            return;
+          } else if (viewStatus === "error") {
+            $("msg-err-msg").textContent = viewError;
+            show($("msg-err"));
+          } else {
+            if (isTypedData) {
+              hide($("msg-plain"));
+              $("msg-typed-data").textContent = JSON.stringify(
+                { domain: request.domain, primaryType: request.primaryType, message: request.message },
+                null,
+                2,
+              );
+              show($("msg-typed"));
+            } else {
+              hide($("msg-typed"));
+              $("msg-text").textContent = request.message;
+              show($("msg-plain"));
+            }
+            show($("msg-content"));
+            if (request.network) {
+              $("msg-chain").textContent = networkLabel(request.network);
+              show($("msg-chain"));
+            }
+          }
+
+          if (!hasTronLink()) {
+            show($("msg-no-wallet"));
+          } else if (viewStatus !== "success") {
+            if (connectedAddress) {
+              $("msg-connected").textContent = "Connected: " + truncAddr(connectedAddress);
+              show($("msg-connected"));
+            } else hide($("msg-connected"));
+            var btn = $("msg-btn");
+            btn.disabled = viewStatus === "connecting" || viewStatus === "signing";
+            btn.textContent = viewStatus === "connecting"
+              ? "Connecting..."
+              : viewStatus === "signing"
+              ? "Confirm in TronLink..."
+              : "Sign";
+            show($("msg-footer"));
+          }
+        }
+
+        function render() {
+          if (request === null) return;
+          if (request.type === "connect") renderConnect();
+          else if (request.type === "send_transaction" || request.type === "trigger_contract") renderTx();
+          else if (request.type === "sign_message" || request.type === "sign_typed_data") renderMsg();
+        }
+
+        // --- Connect Handlers ---
+        async function finishConnect(address) {
+          await completeSuccess(request.id, address);
+          viewStatus = "success";
+          connectedAddress = address;
+          render();
+          setTimeout(function () {
+            window.close();
+          }, 1500);
+        }
+
+        function expectedAddress() {
+          if (request.type === "send_transaction" || request.type === "trigger_contract") return request.from;
+          return request.address;
+        }
+
+        function wrongAddressMessage() {
+          return "Wrong wallet address: expected " + expectedAddress() + ", got " + connectedAddress;
+        }
+
+        async function rejectWith(defaultReason) {
+          if (viewStatus === "wrong_address") {
+            await completeError(request.id, wrongAddressMessage(), ERROR_CODE_WRONG_WALLET_ADDRESS);
+          } else {
+            await completeError(request.id, defaultReason);
+          }
+        }
+
+        window.app = {
+          handleConnect: async function () {
+            viewStatus = "connecting";
+            viewError = "";
+            render();
+            try {
+              var address = await requestAccounts();
+              connectedAddress = address;
+              if (request.address && !addressMatch(address, request.address)) {
+                viewStatus = "wrong_address";
+                render();
+                return;
+              }
+              await finishConnect(address);
+            } catch (err) {
+              viewError = err instanceof Error ? err.message : "Connection failed";
+              viewStatus = "error";
+              render();
+              completeError(request.id, viewError);
+            }
+          },
+
+          cancelConnect: async function () {
+            await rejectWith("User cancelled");
+            window.close();
+          },
+
+          handleSignTx: async function () {
+            viewStatus = "connecting";
+            viewError = "";
+            render();
+            try {
+              var connected = getConnectedAddress();
+              if (!connected) connected = await requestAccounts();
+              connectedAddress = connected;
+
+              if (request.from && !addressMatch(connectedAddress, request.from)) {
+                viewStatus = "wrong_address";
+                render();
+                return;
+              }
+
+              viewStatus = "signing";
+              render();
+
+              var tw = window.tronWeb;
+              if (!tw) throw new Error("TronLink not ready");
+
+              var unsignedTx;
+              if (request.type === "trigger_contract") {
+                var options = {};
+                if (request.feeLimit) options.feeLimit = Number(BigInt(request.feeLimit));
+                if (request.callValue) options.callValue = Number(BigInt(request.callValue));
+                var built = await tw.transactionBuilder.triggerSmartContract(
+                  request.contractAddress,
+                  request.functionSelector,
+                  options,
+                  request.parameters || [],
+                  connectedAddress,
+                );
+                if (!built || !built.result || built.result.result !== true) {
+                  throw new Error("Failed to build contract call: " + JSON.stringify(built && built.result));
+                }
+                unsignedTx = built.transaction;
+              } else {
+                unsignedTx = await tw.transactionBuilder.sendTrx(
+                  request.to,
+                  Number(BigInt(request.amount)),
+                  connectedAddress,
+                );
+              }
+
+              var signedTx = await tw.trx.sign(unsignedTx);
+              var broadcast = await tw.trx.sendRawTransaction(signedTx);
+              if (!broadcast || broadcast.result !== true) {
+                var msg = (broadcast && broadcast.message)
+                  ? (typeof broadcast.message === "string" ? broadcast.message : JSON.stringify(broadcast.message))
+                  : "Broadcast failed";
+                throw new Error(msg);
+              }
+
+              txHash = signedTx.txID || (broadcast.transaction && broadcast.transaction.txID);
+              if (!txHash) throw new Error("No txID returned from broadcast");
+
+              await completeSuccess(request.id, txHash);
+              viewStatus = "success";
+              render();
+              setTimeout(function () {
+                window.close();
+              }, 2000);
+            } catch (err) {
+              console.error("[browser-tron-signer] transaction error:", err);
+              viewError = err instanceof Error ? err.message : "Transaction failed";
+              viewStatus = "error";
+              render();
+              completeError(request.id, viewError);
+            }
+          },
+
+          rejectTx: async function () {
+            await rejectWith("User rejected transaction");
+            window.close();
+          },
+
+          handleSignMsg: async function () {
+            viewStatus = "connecting";
+            viewError = "";
+            render();
+            try {
+              var connected = getConnectedAddress();
+              if (!connected) connected = await requestAccounts();
+              connectedAddress = connected;
+
+              if (request.address && !addressMatch(connected, request.address)) {
+                viewStatus = "wrong_address";
+                render();
+                return;
+              }
+
+              viewStatus = "signing";
+              render();
+
+              var tw = window.tronWeb;
+              if (!tw) throw new Error("TronLink not ready");
+
+              var sig;
+              if (
+                request.type === "sign_typed_data" && request.domain && request.types && request.primaryType && request.message
+              ) {
+                if (typeof tw.trx._signTypedData !== "function") {
+                  throw new Error("This version of TronLink does not support TIP-712 typed-data signing");
+                }
+                sig = await tw.trx._signTypedData(request.domain, request.types, request.message);
+              } else if (request.message) {
+                sig = await tw.trx.signMessageV2(request.message);
+              } else {
+                throw new Error("Invalid signing request");
+              }
+
+              signature = sig;
+              await completeSuccess(request.id, sig);
+              viewStatus = "success";
+              render();
+              setTimeout(function () {
+                window.close();
+              }, 2000);
+            } catch (err) {
+              console.error("[browser-tron-signer] signing error:", err);
+              viewError = err instanceof Error ? err.message : "Signing failed";
+              viewStatus = "error";
+              render();
+              completeError(request.id, viewError);
+            }
+          },
+
+          rejectSign: async function () {
+            await rejectWith("User rejected signing");
+            window.close();
+          },
+        };
+
+        // --- Init ---
+        async function init() {
+          // Give TronLink a moment to inject before we paint the "no wallet" state.
+          await waitForTronWeb(1500);
+
+          var connected = getConnectedAddress();
+          if (connected) connectedAddress = connected;
+
+          var path = window.location.pathname;
+          var match = path.match(/^\\/(connect|sign)\\/([a-f0-9-]+)$/);
+          if (!match) {
+            showView("view-not-found");
+            return;
+          }
+
+          try {
+            request = await fetchPendingRequest(match[2]);
+            if (request.type === "connect") {
+              showView("view-connect");
+              renderConnect();
+            } else if (request.type === "send_transaction" || request.type === "trigger_contract") {
+              showView("view-tx");
+              renderTx();
+            } else if (request.type === "sign_message" || request.type === "sign_typed_data") {
+              showView("view-msg");
+              renderMsg();
+            } else {
+              showView("view-error");
+              $("error-msg").textContent = "Unknown request type";
+            }
+          } catch (err) {
+            var msg = err instanceof Error ? err.message : "Failed to load request";
+            if (msg.includes("not found") || msg.includes("404")) showView("view-not-found");
+            else {
+              $("error-msg").textContent = msg;
+              showView("view-error");
+            }
+          }
+        }
+
+        init();
+      })();
+    </script>
+  </body>
+</html>
+`;
+}
