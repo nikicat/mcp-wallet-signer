@@ -4,6 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP Badge](https://lobehub.com/badge/mcp/user-mcp-wallet-signer)](https://lobehub.com/mcp/user-mcp-wallet-signer)
 
+> [!WARNING]
+> **Superseded by [browser-web3-signer](https://github.com/nikicat/browser-web3-signer)** — the same browser-wallet signing flow, reimplemented in Rust with a CLI plus Rust/TypeScript/Go libraries. mcp-wallet-signer still works, but new development happens there.
+
 **Your private keys never leave your browser.** Every transaction requires explicit user approval in your wallet.
 
 Most blockchain MCPs require you to paste a private key into a config file — giving the AI agent full, unsupervised access to your
