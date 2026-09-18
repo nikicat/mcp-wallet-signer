@@ -1,19 +1,26 @@
+/**
+ * The pre-0.3.1 `WalletSigner` surface, re-backed by the Rust bridge.
+ *
+ * Signing calls go through `browser-web3-signer serve --chain tron`; the balance reads never
+ * touched the wallet and are unchanged, straight TronGrid HTTP calls.
+ */
+
 import { base58 } from "@scure/base";
 
-import { buildConnectUrl, buildSignUrl, openBrowser, SignerErrorCode, WrongWalletAddressError } from "wallet-signer-core";
-import type { RequestResult } from "wallet-signer-core";
-
-import { getDefaultNetwork, getFullHost, getNetworkConfig, getPort, NETWORKS } from "./config.ts";
-import { createHttpServer } from "./http-server.ts";
-import { PendingStore } from "./pending-store.ts";
+import { Bridge, type OpenBrowser } from "./bridge.ts";
+import { getDefaultNetwork, getFullHost, getNetworkConfig, NETWORKS } from "./config.ts";
 import type { TronNetwork, TypedDataDomain, TypedDataField } from "./types.ts";
 
 /** Options for constructing a {@linkcode WalletSigner}. */
 export interface WalletSignerOptions {
+  /**
+   * Ignored since 0.3.1 — the Rust bridge binds its own free port. Accepted so existing
+   * construction sites keep type-checking.
+   */
   port?: number;
   defaultNetwork?: TronNetwork;
   /** Control browser opening: true (default) = auto-open, false = don't open, function = custom handler. */
-  openBrowser?: boolean | ((url: string) => void | Promise<void>);
+  openBrowser?: OpenBrowser;
 }
 
 /** Parameters for {@linkcode WalletSigner.sendTransaction}. */
@@ -127,99 +134,61 @@ export interface TokenBalanceResult {
 }
 
 /**
- * Programmatic interface to the TRON wallet signer. Mirrors `browser-evm-signer`'s WalletSigner
- * but targets TronLink + TRX semantics.
+ * Programmatic interface to the TRON wallet signer. Each instance owns one `serve` subprocess,
+ * which in turn owns the bridge and the browser tab.
  */
 export class WalletSigner {
-  private _port: number;
-  private _defaultNetwork: TronNetwork;
-  private _pendingStore: PendingStore;
-  private _openBrowser: (url: string) => void | Promise<void>;
-  private _httpServer: { port: number; stop: () => Promise<void> } | null = null;
+  readonly #bridge: Bridge;
+  readonly #defaultNetwork: TronNetwork;
 
   constructor(options?: WalletSignerOptions) {
-    this._port = options?.port ?? getPort();
-    this._defaultNetwork = options?.defaultNetwork ?? getDefaultNetwork();
-    this._pendingStore = new PendingStore();
-
-    const ob = options?.openBrowser ?? true;
-    if (typeof ob === "function") {
-      this._openBrowser = ob;
-    } else if (ob) {
-      this._openBrowser = openBrowser;
-    } else {
-      this._openBrowser = () => {};
-    }
+    this.#bridge = new Bridge("tron", options?.openBrowser ?? true);
+    this.#defaultNetwork = options?.defaultNetwork ?? getDefaultNetwork();
   }
 
-  /** The PendingStore owned by this signer. */
-  get pendingStore(): PendingStore {
-    return this._pendingStore;
-  }
-
-  /** The configured default network. */
+  /** The configured default network */
   get defaultNetwork(): TronNetwork {
-    return this._defaultNetwork;
+    return this.#defaultNetwork;
   }
 
-  /** The HTTP server port, or null if not yet started. */
+  /** The bridge port, or null if not yet started */
   get port(): number | null {
-    return this._httpServer?.port ?? null;
+    return this.#bridge.port;
   }
 
-  /** Start the HTTP server explicitly. Called automatically on first signing call. */
-  async start(): Promise<number> {
-    if (this._httpServer) return this._httpServer.port;
-    this._httpServer = await createHttpServer(this._pendingStore, this._port);
-    return this._httpServer.port;
+  /**
+   * Start the bridge explicitly. Called automatically on first signing call.
+   * Returns the port it is listening on.
+   */
+  start(): Promise<number> {
+    return this.#bridge.start();
   }
 
-  private _unwrap(result: RequestResult): string {
-    if (result.success) return result.result;
-    if (result.code === SignerErrorCode.WrongWalletAddress) throw new WrongWalletAddressError(result.error);
-    throw new Error(result.error);
+  /** Send one request through the bridge, defaulting its network. */
+  async #request(body: Record<string, unknown>): Promise<{ result: string; approvalUrl: string }> {
+    return this.#bridge.request({ ...body, network: body["network"] ?? this.#defaultNetwork });
   }
 
-  /** Connect to TronLink and get the wallet address. Opens a browser window for user approval. */
+  /** Connect to TronLink and get the wallet address. */
   async connectWallet(options?: { network?: TronNetwork; address?: string }): Promise<ConnectResult> {
-    const network = options?.network ?? this._defaultNetwork;
-    const port = await this.start();
-
-    const { id, promise } = this._pendingStore.createConnectRequest({ network, address: options?.address });
-    const approvalUrl = buildConnectUrl(port, id);
-    await this._openBrowser(approvalUrl);
-
-    return { address: this._unwrap(await promise), approvalUrl };
+    const { result, approvalUrl } = await this.#request({
+      type: "connect",
+      network: options?.network,
+      address: options?.address,
+    });
+    return { address: result, approvalUrl };
   }
 
   /** Send a native TRX transfer via TronLink. */
   async sendTransaction(params: SendTransactionParams): Promise<TransactionResult> {
-    const port = await this.start();
-
-    const { id, promise } = this._pendingStore.createSendTransactionRequest({
-      ...params,
-      network: params.network ?? this._defaultNetwork,
-    });
-
-    const approvalUrl = buildSignUrl(port, id);
-    await this._openBrowser(approvalUrl);
-
-    return { txHash: this._unwrap(await promise), approvalUrl };
+    const { result, approvalUrl } = await this.#request({ type: "send_transaction", ...params });
+    return { txHash: result, approvalUrl };
   }
 
   /** Trigger a smart-contract function via TronLink (TRC-20 transfers, etc.). */
   async triggerContract(params: TriggerContractParams): Promise<TransactionResult> {
-    const port = await this.start();
-
-    const { id, promise } = this._pendingStore.createTriggerContractRequest({
-      ...params,
-      network: params.network ?? this._defaultNetwork,
-    });
-
-    const approvalUrl = buildSignUrl(port, id);
-    await this._openBrowser(approvalUrl);
-
-    return { txHash: this._unwrap(await promise), approvalUrl };
+    const { result, approvalUrl } = await this.#request({ type: "trigger_contract", ...params });
+    return { txHash: result, approvalUrl };
   }
 
   /**
@@ -227,17 +196,8 @@ export class WalletSigner {
    * builds, signs, and broadcasts the deployment using the connected wallet's tronWeb instance.
    */
   async deployContract(params: DeployContractParams): Promise<DeployContractResult> {
-    const port = await this.start();
+    const { result: raw, approvalUrl } = await this.#request({ type: "deploy_contract", ...params });
 
-    const { id, promise } = this._pendingStore.createDeployContractRequest({
-      ...params,
-      network: params.network ?? this._defaultNetwork,
-    });
-
-    const approvalUrl = buildSignUrl(port, id);
-    await this._openBrowser(approvalUrl);
-
-    const raw = this._unwrap(await promise);
     let parsed: { txHash?: string; contractAddress?: string };
     try {
       parsed = JSON.parse(raw);
@@ -252,32 +212,14 @@ export class WalletSigner {
 
   /** Sign an arbitrary message via `tronWeb.trx.signMessageV2`. */
   async signMessage(params: SignMessageParams): Promise<SignResult> {
-    const port = await this.start();
-
-    const { id, promise } = this._pendingStore.createSignMessageRequest({
-      ...params,
-      network: params.network ?? this._defaultNetwork,
-    });
-
-    const approvalUrl = buildSignUrl(port, id);
-    await this._openBrowser(approvalUrl);
-
-    return { signature: this._unwrap(await promise), approvalUrl };
+    const { result, approvalUrl } = await this.#request({ type: "sign_message", ...params });
+    return { signature: result, approvalUrl };
   }
 
   /** Sign TIP-712 typed data via `tronWeb.trx._signTypedData`. */
   async signTypedData(params: SignTypedDataParams): Promise<SignResult> {
-    const port = await this.start();
-
-    const { id, promise } = this._pendingStore.createSignTypedDataRequest({
-      ...params,
-      network: params.network ?? this._defaultNetwork,
-    });
-
-    const approvalUrl = buildSignUrl(port, id);
-    await this._openBrowser(approvalUrl);
-
-    return { signature: this._unwrap(await promise), approvalUrl };
+    const { result, approvalUrl } = await this.#request({ type: "sign_typed_data", ...params });
+    return { signature: result, approvalUrl };
   }
 
   /**
@@ -287,7 +229,7 @@ export class WalletSigner {
    * the API accepts the Base58 form returned by TronLink.
    */
   async getBalance(params: { address: string; network?: TronNetwork }): Promise<BalanceResult> {
-    const network = params.network ?? this._defaultNetwork;
+    const network = params.network ?? this.#defaultNetwork;
     const fullHost = getFullHost(network);
     if (!fullHost) throw new Error(`Unknown TRON network: ${network}`);
 
@@ -316,7 +258,7 @@ export class WalletSigner {
     address: string;
     network?: TronNetwork;
   }): Promise<TokenBalanceResult> {
-    const network = params.network ?? this._defaultNetwork;
+    const network = params.network ?? this.#defaultNetwork;
     const fullHost = getFullHost(network);
     if (!fullHost) throw new Error(`Unknown TRON network: ${network}`);
 
@@ -340,17 +282,12 @@ export class WalletSigner {
     };
   }
 
-  /** Shut down the HTTP server and cancel all pending requests. */
+  /** Shut down the bridge subprocess. */
   async shutdown(): Promise<void> {
-    if (this._httpServer) {
-      await this._httpServer.stop();
-      this._httpServer = null;
-    }
-    for (const id of this._pendingStore.getPendingIds()) {
-      this._pendingStore.cancel(id, "Wallet signer shutting down");
-    }
+    await this.#bridge.stop();
   }
 }
+
 
 /** Format a SUN bigint as TRX with up to `decimals` fractional digits, no trailing zeros. */
 function formatSun(sun: bigint, decimals: number): string {

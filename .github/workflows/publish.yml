@@ -1,89 +1,41 @@
 name: Publish package
 
+# Tag a release as `<package>@<version>`, e.g. `mcp-wallet-signer@0.7.0`, matching the version
+# in that package's package.json.
 on:
   release:
     types: [created]
 
 jobs:
-  parse:
-    runs-on: ubuntu-latest
-    outputs:
-      package: ${{ steps.parse.outputs.package }}
-      version: ${{ steps.parse.outputs.version }}
-      dir: ${{ steps.parse.outputs.dir }}
-      jsr: ${{ steps.parse.outputs.jsr }}
-    steps:
-      - name: Parse package from tag
-        id: parse
-        run: |
-          TAG="${{ github.event.release.tag_name }}"
-          PACKAGE="${TAG%@*}"
-          VERSION="${TAG#*@}"
-          case "$PACKAGE" in
-            mcp-wallet-signer)    DIR="packages/mcp-wallet-signer"; JSR="false" ;;
-            browser-evm-signer)   DIR="packages/browser-evm-signer"; JSR="true" ;;
-            browser-tron-signer)  DIR="packages/browser-tron-signer"; JSR="true" ;;
-            # wallet-signer-core is intentionally not listed — it's bundled into both chain
-            # packages by dnt, so no consumer would ever install it directly from npm.
-            *) echo "::error::Unknown package '$PACKAGE' in tag '$TAG'"; exit 1 ;;
-          esac
-          echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
-          echo "jsr=$JSR" >> "$GITHUB_OUTPUT"
-
   npm:
-    needs: parse
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # npm auth is trusted publishing (OIDC) — no tokens in this repo. Each package lists this
+      # repo + publish.yml as its trusted publisher on npmjs.com, and npm generates provenance.
       id-token: write
     steps:
       - uses: actions/checkout@v6
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Build
-        working-directory: ${{ needs.parse.outputs.dir }}
-        run: deno task build:npm
+      - run: npm ci
+      - run: npm test # also builds dist/, which the library packages publish
 
-      - name: Verify version matches tag
-        working-directory: ${{ needs.parse.outputs.dir }}
+      - name: Publish ${{ github.event.release.tag_name }}
         run: |
-          LOCAL=$(node -p "require('./npm/package.json').version")
-          if [ "$LOCAL" != "${{ needs.parse.outputs.version }}" ]; then
-            echo "::error::Built version $LOCAL doesn't match tag version ${{ needs.parse.outputs.version }}"
+          TAG="${{ github.event.release.tag_name }}"
+          PACKAGE="${TAG%@*}"
+          VERSION="${TAG#*@}"
+          if [ ! -d "packages/$PACKAGE" ]; then
+            echo "::error::Unknown package '$PACKAGE' in tag '$TAG'"
             exit 1
           fi
-
-      - name: Publish
-        working-directory: ${{ needs.parse.outputs.dir }}/npm
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  jsr:
-    needs: parse
-    if: needs.parse.outputs.jsr == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v6
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Inject version into source
-        working-directory: ${{ needs.parse.outputs.dir }}
-        run: echo 'export const VERSION = "${{ needs.parse.outputs.version }}";' > src/version.ts
-
-      - name: Publish
-        working-directory: ${{ needs.parse.outputs.dir }}
-        run: deno publish --allow-dirty
+          LOCAL=$(node -p "require('./packages/$PACKAGE/package.json').version")
+          if [ "$LOCAL" != "$VERSION" ]; then
+            echo "::error::$PACKAGE is at $LOCAL, but the tag says $VERSION"
+            exit 1
+          fi
+          npm publish --provenance --access public --workspace "packages/$PACKAGE"

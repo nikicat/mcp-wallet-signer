@@ -11,33 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
-      - uses: denoland/setup-deno@v2
+      - uses: actions/setup-node@v6
         with:
-          deno-version: v2.x
-
-      - name: Install dependencies
-        run: deno task install:all
-
-      - name: Check (type check, lint, fmt)
-        run: deno task check:all
-
-      - name: Unit & e2e tests
-        run: deno task test:all
-
-      - name: Build both packages
-        run: deno task build:all
-
-      # Playwright pin matches between both chain packages (1.58.2), so the chromium
-      # downloaded here is reused by the TRON browser tests below.
-      - name: Install Playwright Chromium
-        working-directory: packages/browser-evm-signer
-        run: deno task playwright:install
-
-      - name: EVM browser tests
-        working-directory: packages/browser-evm-signer
-        run: deno task test:browser
-
-      - name: TRON browser tests
-        working-directory: packages/browser-tron-signer
-        run: deno task test:browser
+          node-version: "24"
+      - run: npm ci
+      - run: npm test

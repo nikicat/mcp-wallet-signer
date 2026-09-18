@@ -1,15 +1,21 @@
 import process from "node:process";
 
-import { DEFAULT_PORT, getPortFromEnv } from "wallet-signer-core";
-
 import type { ChainConfig } from "./types.ts";
 
-// Re-export so callers depending on `import { DEFAULT_PORT } from "browser-evm-signer"` still work.
-export { DEFAULT_PORT };
+/**
+ * The port the pre-0.3.1 HTTP bridge listened on. The Rust bridge picks its own free port, so
+ * this is kept only so that `import { DEFAULT_PORT }` still resolves.
+ */
+export const DEFAULT_PORT = 3847;
 
-/** Get the HTTP server port from `EVM_MCP_PORT` env var, falling back to {@linkcode DEFAULT_PORT}. */
+/**
+ * Get the HTTP server port from `EVM_MCP_PORT`, falling back to {@linkcode DEFAULT_PORT}.
+ *
+ * Kept for source compatibility — the Rust bridge binds its own free port and ignores this.
+ */
 export function getPort(): number {
-  return getPortFromEnv("EVM_MCP_PORT", DEFAULT_PORT);
+  const parsed = parseInt(process.env.EVM_MCP_PORT ?? "", 10);
+  return !isNaN(parsed) && parsed > 0 && parsed < 65536 ? parsed : DEFAULT_PORT;
 }
 
 /** Get the default chain ID from `EVM_MCP_DEFAULT_CHAIN` env var, falling back to Ethereum mainnet (1). */

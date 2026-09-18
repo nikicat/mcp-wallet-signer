@@ -1,0 +1,46 @@
+{
+  "name": "mcp-wallet-signer",
+  "mcpName": "io.github.nikicat/mcp-wallet-signer",
+  "version": "0.7.0",
+  "description": "MCP server that routes EVM transactions and messages to your own browser wallet for signing — a thin shim over browser-web3-signer",
+  "type": "module",
+  "bin": {
+    "mcp-wallet-signer": "./index.js"
+  },
+  "files": [
+    "index.js"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "wallet",
+    "ethereum",
+    "evm",
+    "metamask",
+    "browser-wallet",
+    "signing",
+    "blockchain",
+    "web3",
+    "claude",
+    "non-custodial",
+    "ai-agent",
+    "transaction-signing"
+  ],
+  "author": "Nikolay Bryskin",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nikicat/mcp-wallet-signer"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "browser-web3-signer": "^0.4.2",
+    "zod": "^4.3.6"
+  },
+  "scripts": {
+    "test": "node --test test.js"
+  }
+}

@@ -1,9 +1,9 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.nikicat/mcp-wallet-signer",
-  "version": "0.6.0",
-  "title": "EVM + TRON Wallet Signer",
-  "description": "Non-custodial MCP server that routes EVM (MetaMask/Rabby via EIP-6963) and TRON (TronLink) transactions to browser wallets for signing. Private keys never leave the browser — every transaction requires explicit user approval.",
+  "version": "0.7.0",
+  "title": "EVM Wallet Signer",
+  "description": "Non-custodial MCP server that routes EVM transactions to browser wallets (MetaMask, Rabby, …) for signing. Private keys never leave the browser — every transaction requires explicit user approval.",
   "websiteUrl": "https://github.com/nikicat/mcp-wallet-signer",
   "repository": {
     "url": "https://github.com/nikicat/mcp-wallet-signer",
@@ -14,35 +14,17 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "mcp-wallet-signer",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "transport": {
         "type": "stdio"
       },
       "runtimeHint": "npx",
       "environmentVariables": [
         {
-          "name": "EVM_MCP_PORT",
-          "description": "HTTP server port for the EVM browser approval UI (default: 3847)",
-          "isRequired": false,
-          "default": "3847"
-        },
-        {
           "name": "EVM_MCP_DEFAULT_CHAIN",
           "description": "Default EVM chain ID (default: 1 for Ethereum mainnet)",
           "isRequired": false,
           "default": "1"
-        },
-        {
-          "name": "TRON_MCP_PORT",
-          "description": "HTTP server port for the TRON browser approval UI (default: 3848)",
-          "isRequired": false,
-          "default": "3848"
-        },
-        {
-          "name": "TRON_MCP_DEFAULT_NETWORK",
-          "description": "Default TRON network: mainnet, shasta, or nile (default: mainnet)",
-          "isRequired": false,
-          "default": "mainnet"
         }
       ]
     }

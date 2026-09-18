@@ -1,0 +1,48 @@
+{
+  "name": "browser-tron-signer",
+  "version": "0.3.1",
+  "type": "module",
+  "description": "Deprecated: compatibility shim over browser-web3-signer. Sign TRON transactions with your own browser wallet.",
+  "keywords": [
+    "tron",
+    "trx",
+    "wallet",
+    "tronlink",
+    "trc20",
+    "browser-wallet",
+    "signing",
+    "deprecated"
+  ],
+  "author": "Nikolay Bryskin",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nikicat/mcp-wallet-signer",
+    "directory": "packages/browser-tron-signer"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "node --test --import tsx ./test/*.test.ts"
+  },
+  "dependencies": {
+    "@scure/base": "^1.1.0",
+    "browser-web3-signer": "^0.4.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}

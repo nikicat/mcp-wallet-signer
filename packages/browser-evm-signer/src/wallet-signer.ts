@@ -1,18 +1,26 @@
+/**
+ * The pre-0.3.1 `WalletSigner` surface, re-backed by the Rust bridge.
+ *
+ * Signing calls go through `browser-web3-signer serve`; the balance reads never touched the
+ * wallet and are unchanged, straight viem RPC calls.
+ */
+
 import { createPublicClient, erc20Abi, formatEther, formatUnits, http } from "viem";
 
-import { PendingStore } from "./pending-store.ts";
-import { createHttpServer } from "./http-server.ts";
-import { buildConnectUrl, buildSignUrl, openBrowser } from "./browser.ts";
-import { CHAINS, getDefaultChainId, getPort, getRpcUrl } from "./config.ts";
-import { SignerErrorCode, WrongWalletAddressError } from "./errors.ts";
-import type { RequestResult, TypedDataDomain, TypedDataField } from "./types.ts";
+import { Bridge, type OpenBrowser } from "./bridge.ts";
+import { CHAINS, getDefaultChainId, getRpcUrl } from "./config.ts";
+import type { TypedDataDomain, TypedDataField } from "./types.ts";
 
 /** Options for constructing a {@linkcode WalletSigner}. */
 export interface WalletSignerOptions {
+  /**
+   * Ignored since 0.3.1 — the Rust bridge binds its own free port. Accepted so existing
+   * construction sites keep type-checking.
+   */
   port?: number;
   defaultChainId?: number;
   /** Control browser opening: true (default) = auto-open, false = don't open, function = custom handler */
-  openBrowser?: boolean | ((url: string) => void | Promise<void>);
+  openBrowser?: OpenBrowser;
 }
 
 /** Parameters for {@linkcode WalletSigner.sendTransaction}. */
@@ -45,7 +53,12 @@ export interface SignTypedDataParams {
   chainId?: number;
 }
 
-/** Result of {@linkcode WalletSigner.connectWallet}: the connected address and the approval URL. */
+/**
+ * Result of {@linkcode WalletSigner.connectWallet}: the connected address and the approval URL.
+ *
+ * Since 0.3.1 `approvalUrl` is the bridge's base URL — the bridge opens the approval page itself
+ * and does not hand the per-request URL back.
+ */
 export interface ConnectResult {
   address: string;
   approvalUrl: string;
@@ -83,63 +96,34 @@ export interface TokenBalanceResult {
 }
 
 /**
- * Programmatic interface to the wallet signer.
- * Each instance owns its own PendingStore and HTTP server.
+ * Programmatic interface to the wallet signer. Each instance owns one `serve` subprocess, which
+ * in turn owns the bridge and the browser tab.
  */
 export class WalletSigner {
-  private _port: number;
-  private _defaultChainId: number;
-  private _pendingStore: PendingStore;
-  private _openBrowser: (url: string) => void | Promise<void>;
-  private _httpServer: { port: number; stop: () => Promise<void> } | null = null;
+  readonly #bridge: Bridge;
+  readonly #defaultChainId: number;
 
   constructor(options?: WalletSignerOptions) {
-    this._port = options?.port ?? getPort();
-    this._defaultChainId = options?.defaultChainId ?? getDefaultChainId();
-    this._pendingStore = new PendingStore();
-
-    const ob = options?.openBrowser ?? true;
-    if (typeof ob === "function") {
-      this._openBrowser = ob;
-    } else if (ob) {
-      this._openBrowser = openBrowser;
-    } else {
-      this._openBrowser = () => {};
-    }
-  }
-
-  /** The PendingStore owned by this signer */
-  get pendingStore(): PendingStore {
-    return this._pendingStore;
-  }
-
-  /** Unwrap a pending-store result, mapping discriminating error codes to typed exceptions. */
-  private _unwrap(result: RequestResult): string {
-    if (result.success) return result.result;
-    if (result.code === SignerErrorCode.WrongWalletAddress) throw new WrongWalletAddressError(result.error);
-    throw new Error(result.error);
+    this.#bridge = new Bridge("evm", options?.openBrowser ?? true);
+    this.#defaultChainId = options?.defaultChainId ?? getDefaultChainId();
   }
 
   /** The configured default chain ID */
   get defaultChainId(): number {
-    return this._defaultChainId;
+    return this.#defaultChainId;
   }
 
-  /** The HTTP server port, or null if not yet started */
+  /** The bridge port, or null if not yet started */
   get port(): number | null {
-    return this._httpServer?.port ?? null;
+    return this.#bridge.port;
   }
 
   /**
-   * Start the HTTP server explicitly. Called automatically on first signing call.
-   * Returns the port the server is listening on.
+   * Start the bridge explicitly. Called automatically on first signing call.
+   * Returns the port it is listening on.
    */
-  async start(): Promise<number> {
-    if (this._httpServer) {
-      return this._httpServer.port;
-    }
-    this._httpServer = await createHttpServer(this._pendingStore, this._port);
-    return this._httpServer.port;
+  start(): Promise<number> {
+    return this.#bridge.start();
   }
 
   /**
@@ -147,14 +131,12 @@ export class WalletSigner {
    * Opens a browser window for user approval.
    */
   async connectWallet(options?: { chainId?: number; address?: string }): Promise<ConnectResult> {
-    const chainId = options?.chainId ?? this._defaultChainId;
-    const port = await this.start();
-
-    const { id, promise } = this._pendingStore.createConnectRequest({ chainId, address: options?.address });
-    const approvalUrl = buildConnectUrl(port, id);
-    await this._openBrowser(approvalUrl);
-
-    return { address: this._unwrap(await promise), approvalUrl };
+    const { result, approvalUrl } = await this.#bridge.request({
+      type: "connect",
+      chainId: options?.chainId ?? this.#defaultChainId,
+      address: options?.address,
+    });
+    return { address: result, approvalUrl };
   }
 
   /**
@@ -162,17 +144,12 @@ export class WalletSigner {
    * Opens a browser window for user approval.
    */
   async sendTransaction(params: SendTransactionParams): Promise<TransactionResult> {
-    const port = await this.start();
-
-    const { id, promise } = this._pendingStore.createSendTransactionRequest({
+    const { result, approvalUrl } = await this.#bridge.request({
+      type: "send_transaction",
       ...params,
-      chainId: params.chainId ?? this._defaultChainId,
+      chainId: params.chainId ?? this.#defaultChainId,
     });
-
-    const approvalUrl = buildSignUrl(port, id);
-    await this._openBrowser(approvalUrl);
-
-    return { txHash: this._unwrap(await promise), approvalUrl };
+    return { txHash: result, approvalUrl };
   }
 
   /**
@@ -180,17 +157,12 @@ export class WalletSigner {
    * Opens a browser window for user approval.
    */
   async signMessage(params: SignMessageParams): Promise<SignResult> {
-    const port = await this.start();
-
-    const { id, promise } = this._pendingStore.createSignMessageRequest({
+    const { result, approvalUrl } = await this.#bridge.request({
+      type: "sign_message",
       ...params,
-      chainId: params.chainId ?? this._defaultChainId,
+      chainId: params.chainId ?? this.#defaultChainId,
     });
-
-    const approvalUrl = buildSignUrl(port, id);
-    await this._openBrowser(approvalUrl);
-
-    return { signature: this._unwrap(await promise), approvalUrl };
+    return { signature: result, approvalUrl };
   }
 
   /**
@@ -198,17 +170,12 @@ export class WalletSigner {
    * Opens a browser window for user approval.
    */
   async signTypedData(params: SignTypedDataParams): Promise<SignResult> {
-    const port = await this.start();
-
-    const { id, promise } = this._pendingStore.createSignTypedDataRequest({
+    const { result, approvalUrl } = await this.#bridge.request({
+      type: "sign_typed_data",
       ...params,
-      chainId: params.chainId ?? this._defaultChainId,
+      chainId: params.chainId ?? this.#defaultChainId,
     });
-
-    const approvalUrl = buildSignUrl(port, id);
-    await this._openBrowser(approvalUrl);
-
-    return { signature: this._unwrap(await promise), approvalUrl };
+    return { signature: result, approvalUrl };
   }
 
   /**
@@ -216,22 +183,17 @@ export class WalletSigner {
    * Does not require browser interaction — reads directly from the blockchain.
    */
   async getBalance(params: { address: string; chainId?: number }): Promise<BalanceResult> {
-    const chainId = params.chainId ?? this._defaultChainId;
+    const chainId = params.chainId ?? this.#defaultChainId;
     const rpcUrl = getRpcUrl(chainId);
     if (!rpcUrl) throw new Error(`Unknown chain ID: ${chainId}. No RPC URL configured.`);
 
     const client = createPublicClient({ transport: http(rpcUrl) });
-    const balance = await client.getBalance({
-      address: params.address as `0x${string}`,
-    });
-
-    const chain = CHAINS[chainId];
-    const symbol = chain?.nativeCurrency.symbol || "ETH";
+    const balance = await client.getBalance({ address: params.address as `0x${string}` });
 
     return {
       balance: formatEther(balance),
       wei: balance.toString(),
-      symbol,
+      symbol: CHAINS[chainId]?.nativeCurrency.symbol || "ETH",
     };
   }
 
@@ -245,7 +207,7 @@ export class WalletSigner {
     address: string;
     chainId?: number;
   }): Promise<TokenBalanceResult> {
-    const chainId = params.chainId ?? this._defaultChainId;
+    const chainId = params.chainId ?? this.#defaultChainId;
     const rpcUrl = getRpcUrl(chainId);
     if (!rpcUrl) throw new Error(`Unknown chain ID: ${chainId}. No RPC URL configured.`);
 
@@ -266,16 +228,8 @@ export class WalletSigner {
     };
   }
 
-  /**
-   * Shut down the HTTP server and cancel all pending requests.
-   */
+  /** Shut down the bridge subprocess. */
   async shutdown(): Promise<void> {
-    if (this._httpServer) {
-      await this._httpServer.stop();
-      this._httpServer = null;
-    }
-    for (const id of this._pendingStore.getPendingIds()) {
-      this._pendingStore.cancel(id, "Wallet signer shutting down");
-    }
+    await this.#bridge.stop();
   }
 }
