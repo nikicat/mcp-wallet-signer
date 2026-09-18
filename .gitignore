@@ -1,34 +1,6 @@
-# Dependencies
 node_modules/
-
-# Root lock file (packages have their own tracked lock files)
-/deno.lock
-
-# Build output
 dist/
-npm/
-packages/*/web/dist/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Test artifacts
-test-results/
-
-# Logs
 *.log
-npm-debug.log*
-
-# Dotfiles (tokens, credentials, local config)
-.*
-!.gitignore
-!.github/
-!.claude/
-.claude/settings.local.json
+.env
+.env.local
+.DS_Store

@@ -26,7 +26,8 @@ export function walletSignerTransport(
         }
 
         case "eth_sendTransaction": {
-          const [tx] = params as [Record<string, string>];
+          const [tx] = params as [Partial<Record<string, string>>];
+          if (!tx.to) throw new Error("eth_sendTransaction requires a `to` address");
           const sendParams: SendTransactionParams = { to: tx.to };
           if (tx.from) sendParams.from = tx.from;
           if (tx.data) sendParams.data = tx.data;
@@ -63,7 +64,7 @@ export function walletSignerTransport(
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params: params ?? [] }),
           });
-          const json = await resp.json();
+          const json = (await resp.json()) as { result?: unknown; error?: { message?: string } };
           if (json.error) {
             throw new Error(json.error.message ?? JSON.stringify(json.error));
           }

@@ -1,0 +1,14 @@
+{
+  "name": "mcp-wallet-signer-shims",
+  "private": true,
+  "description": "Compatibility shims over browser-web3-signer for the packages this repo used to publish",
+  "workspaces": [
+    "packages/browser-evm-signer",
+    "packages/browser-tron-signer",
+    "packages/mcp-wallet-signer"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run build && npm test --workspaces"
+  }
+}
