@@ -36,7 +36,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.32.0",
     "browser-web3-signer": "^0.4.2",
     "zod": "^4.3.6"
   },
